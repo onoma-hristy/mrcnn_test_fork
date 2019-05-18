@@ -86,7 +86,7 @@ class Config(object):
 
     # Non-max suppression threshold to filter RPN proposals.
     # You can increase this during training to generate more propsals.
-    RPN_NMS_THRESHOLD = 0.7
+    RPN_NMS_THRESHOLD = 0.9
 
     # How many anchors per image to use for RPN training
     RPN_TRAIN_ANCHORS_PER_IMAGE = 256
@@ -101,7 +101,7 @@ class Config(object):
     # If enabled, resizes instance masks to a smaller size to reduce
     # memory load. Recommended when using high-resolution images.
     USE_MINI_MASK = True
-    MINI_MASK_SHAPE = (56, 56)  # (height, width) of the mini-mask
+    MINI_MASK_SHAPE = (130, 130)  # (height, width) of the mini-mask
 
     # Input image resizing
     # Generally, use the "square" resizing mode for training and predicting
@@ -124,7 +124,7 @@ class Config(object):
     #         size IMAGE_MIN_DIM x IMAGE_MIN_DIM. Can be used in training only.
     #         IMAGE_MAX_DIM is not used in this mode.
     IMAGE_RESIZE_MODE = "square"
-    IMAGE_MIN_DIM = 800
+    IMAGE_MIN_DIM = 768
     IMAGE_MAX_DIM = 1024
     # Minimum scaling ratio. Checked after MIN_IMAGE_DIM and can force further
     # up scaling. For example, if set to 2 then images are scaled up to double
@@ -137,7 +137,8 @@ class Config(object):
     IMAGE_CHANNEL_COUNT = 3
 
     # Image mean (RGB)
-    MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
+    #MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
+    MEAN_PIXEL = np.array([70.0, 70.0, 70.0])
 
     # Number of ROIs per image to feed to classifier/mask heads
     # The Mask RCNN paper uses 512 but often the RPN doesn't generate
