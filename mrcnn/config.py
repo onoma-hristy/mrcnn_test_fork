@@ -45,7 +45,7 @@ class Config(object):
     # Number of validation steps to run at the end of every training epoch.
     # A bigger number improves accuracy of validation stats, but slows
     # down the training.
-    VALIDATION_STEPS = 50
+    VALIDATION_STEPS = 60
 
     # Backbone network architecture
     # Supported values are: resnet50, resnet101.
@@ -61,7 +61,7 @@ class Config(object):
 
     # The strides of each layer of the FPN Pyramid. These values
     # are based on a Resnet101 backbone.
-    BACKBONE_STRIDES = [4, 8, 16, 32, 64]
+    BACKBONE_STRIDES = [2, 4, 8, 16, 32]
 
     # Size of the fully-connected layers in the classification graph
     FPN_CLASSIF_FC_LAYERS_SIZE = 1024
@@ -74,7 +74,7 @@ class Config(object):
 
     # Length of square anchor side in pixels
     #RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
-    RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)
+    RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)
 
     # Ratios of anchors at each cell (width/height)
     # A value of 1 represents a square anchor, and 0.5 is a wide anchor
@@ -102,7 +102,7 @@ class Config(object):
     # If enabled, resizes instance masks to a smaller size to reduce
     # memory load. Recommended when using high-resolution images.
     USE_MINI_MASK = True
-    MINI_MASK_SHAPE = (56, 56)  # (height, width) of the mini-mask
+    MINI_MASK_SHAPE = (30, 30)  # (height, width) of the mini-mask
 
     # Input image resizing
     # Generally, use the "square" resizing mode for training and predicting
