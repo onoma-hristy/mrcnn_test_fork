@@ -74,7 +74,7 @@ class Config(object):
 
     # Length of square anchor side in pixels
     #RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
-    RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)
+    RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)
 
     # Ratios of anchors at each cell (width/height)
     # A value of 1 represents a square anchor, and 0.5 is a wide anchor
@@ -87,10 +87,10 @@ class Config(object):
 
     # Non-max suppression threshold to filter RPN proposals.
     # You can increase this during training to generate more propsals.
-    RPN_NMS_THRESHOLD = 1.0
+    RPN_NMS_THRESHOLD = 0.8
 
     # How many anchors per image to use for RPN training
-    RPN_TRAIN_ANCHORS_PER_IMAGE = 512
+    RPN_TRAIN_ANCHORS_PER_IMAGE = 256
     
     # ROIs kept after tf.nn.top_k and before non-maximum suppression
     PRE_NMS_LIMIT = 6000
@@ -102,7 +102,7 @@ class Config(object):
     # If enabled, resizes instance masks to a smaller size to reduce
     # memory load. Recommended when using high-resolution images.
     USE_MINI_MASK = False
-    MINI_MASK_SHAPE = (30, 30)  # (height, width) of the mini-mask
+    MINI_MASK_SHAPE = (128, 128)  # (height, width) of the mini-mask
 
     # Input image resizing
     # Generally, use the "square" resizing mode for training and predicting
@@ -171,7 +171,7 @@ class Config(object):
 
     # Minimum probability value to accept a detected instance
     # ROIs below this threshold are skipped
-    DETECTION_MIN_CONFIDENCE = 0.8
+    DETECTION_MIN_CONFIDENCE = 0.7
 
     # Non-maximum suppression threshold for detection
     DETECTION_NMS_THRESHOLD = 0.3
