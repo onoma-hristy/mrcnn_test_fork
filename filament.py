@@ -33,6 +33,8 @@ import json
 import datetime
 import numpy as np
 import skimage.draw
+import skimage.io
+from imgaug import augmenters as iaa
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath(".")
@@ -186,21 +188,34 @@ def train(model):
     dataset_val = filamentDataset()
     dataset_val.load_filament(args.dataset, "val")
     dataset_val.prepare()
-
+    # Image augmentation
+    # http://imgaug.readthedocs.io/en/latest/source/augmenters.html
+    augmentation = iaa.SomeOf((0, 2), [
+        iaa.Fliplr(0.5),
+        iaa.Flipud(0.5),
+        iaa.OneOf([iaa.Affine(rotate=90),
+                   iaa.Affine(rotate=180),
+                   iaa.Affine(rotate=270)]),
+        iaa.Multiply((0.8, 1.5)),
+        iaa.GaussianBlur(sigma=(0.0, 5.0))
+    ])
     # *** This training schedule is an example. Update to your needs ***
     # Since we're using a very small dataset, and starting from
     # COCO trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
-    print("Training network heads")
+    print("Train network heads")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=30,
+                epochs=20,
+                augmentation=augmentation,
                 layers='heads')
+
+    print("Train all layers")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=30,
+                epochs=40,
+                augmentation=augmentation,
                 layers='all')
-
 
 def color_splash(image, mask):
     """Apply color splash effect.
