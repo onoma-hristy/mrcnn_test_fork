@@ -35,6 +35,8 @@ import numpy as np
 import skimage.draw
 import skimage.io
 from imgaug import augmenters as iaa
+from mrcnn import visualize
+from mrcnn.visualize import display_images
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath(".")
@@ -288,6 +290,28 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
         vwriter.release()
     print("Saved to ", file_name)
 
+def detect_filament(model, image_path=None):
+    assert image_path
+
+    # Image or video?
+    if image_path:
+        # Run model detection and generate the color splash effect
+        print("Running on {}".format(args.image))
+        # Read image
+        image = skimage.io.imread(args.image)
+        # Detect objects
+        r = model.detect([image], verbose=1)[0]
+        # Color splash
+        splash = color_splash(image, r['masks'])
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], 
+                             r['scores'],
+                              title="Predictions")
+        
+        # Save output
+        file_name = "splash_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
+        skimage.io.imsave(file_name, splash)
+    print("Saved to ", file_name)
+
 
 ############################################################
 #  Training
@@ -326,6 +350,9 @@ if __name__ == '__main__':
     elif args.command == "splash":
         assert args.image or args.video,\
                "Provide --image or --video to apply color splash"
+    elif args.command == "detect":
+        assert args.image,\
+               "Provide --image or --video to apply detection"
 
     print("Weights: ", args.weights)
     print("Dataset: ", args.dataset)
@@ -383,6 +410,8 @@ if __name__ == '__main__':
     elif args.command == "splash":
         detect_and_color_splash(model, image_path=args.image,
                                 video_path=args.video)
+    elif args.command == "detect":
+        detect_filament(model, image_path=args.image)
     else:
         print("'{}' is not recognized. "
               "Use 'train' or 'splash'".format(args.command))
