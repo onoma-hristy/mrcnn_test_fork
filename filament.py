@@ -26,7 +26,7 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
     # Apply color splash to video using the last weights you trained
     python3 filament.py splash --weights=last --video=<URL or path to file>
 """
-
+import cv2
 import os
 import sys
 import json
@@ -35,7 +35,9 @@ import numpy as np
 import skimage.draw
 import skimage.io
 from imgaug import augmenters as iaa
-
+from mrcnn import visualize
+from mrcnn.visualize import display_images
+import matplotlib.pyplot as plt
 # Root directory of the project
 ROOT_DIR = os.path.abspath(".")
 
@@ -207,6 +209,7 @@ def train(model):
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
                 epochs=20,
+                augmentation=augmentation,
                 layers='heads')
     print("Train all layers")
     model.train(dataset_train, dataset_val,
@@ -286,6 +289,38 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
         vwriter.release()
     print("Saved to ", file_name)
 
+def detect_filament(model, image_path=None):
+    assert image_path
+
+    if image_path:
+        # Run model detection and generate the color splash effect
+        print("Running on {}".format(args.image))
+        # Read image
+        image = skimage.io.imread(args.image)
+        # Detect objects
+        r = model.detect([image], verbose=1)[0]
+        mask = r['masks']
+	# Compute Bounding box
+        bbox = utils.extract_bboxes(mask)
+        # Color splash
+        rect = r['rois']
+        print(rect)
+#        cv2.imshow('med',image)
+#        closeWindow = -1
+#        while closeWindow<0:
+#            closeWindow = cv2.waitKey(1) 
+#        cv2.destroyAllWindows()
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], r['scores'], 
+                              title="Predictions",show_mask=False, show_bbox=True)
+        # Save output
+        file_name = "detect_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
+        for i in range(0,len(rect)):
+	        cv2.rectangle(image,((rect[i][1]-10),(rect[i][0]-10)),((rect[i][3]+10),(rect[i][2]+10)),(255,255,255),1)
+        cv2.imwrite(file_name, image)
+
+#        skimage.io.imsave(file_name, image)
+#    print("Saved to ", file_name)
+
 
 ############################################################
 #  Training
@@ -324,6 +359,9 @@ if __name__ == '__main__':
     elif args.command == "splash":
         assert args.image or args.video,\
                "Provide --image or --video to apply color splash"
+    elif args.command == "detect":
+        assert args.image,\
+               "Provide --image to detect filament"
 
     print("Weights: ", args.weights)
     print("Dataset: ", args.dataset)
@@ -381,6 +419,8 @@ if __name__ == '__main__':
     elif args.command == "splash":
         detect_and_color_splash(model, image_path=args.image,
                                 video_path=args.video)
+    elif args.command == "detect":
+        detect_filament(model, image_path=args.image)                                
     else:
         print("'{}' is not recognized. "
               "Use 'train' or 'splash'".format(args.command))

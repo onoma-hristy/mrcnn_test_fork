@@ -1,1 +1,1 @@
-python3 filament.py splash --weights=mask_rcnn_dog_0051.h5 --image=images/20171126.png
+python3 filament.py detect --weights=/home/rei/venv/mask/__versions/v0.9/mask_rcnn_filament_0063.h5 --image=images/normalized_20171007.png
