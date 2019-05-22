@@ -74,7 +74,7 @@ class Config(object):
 
     # Length of square anchor side in pixels
 #    RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
-    RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)
+    RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)
 
     # Ratios of anchors at each cell (width/height)
     # A value of 1 represents a square anchor, and 0.5 is a wide anchor
@@ -183,7 +183,7 @@ class Config(object):
     LEARNING_MOMENTUM = 0.9
 
     # Weight decay regularization
-    WEIGHT_DECAY = 0.001
+    WEIGHT_DECAY = 0.005
 
     # Loss weights for more precise optimization.
     # Can be used for R-CNN training setup.
