@@ -138,7 +138,7 @@ class Config(object):
     IMAGE_CHANNEL_COUNT = 3
 
     # Image mean (RGB)
-    MEAN_PIXEL = np.array([143.0, 143.0, 143.0])
+    MEAN_PIXEL = np.array([60.0, 60.0, 60.0])
 
     # Number of ROIs per image to feed to classifier/mask heads
     # The Mask RCNN paper uses 512 but often the RPN doesn't generate
@@ -183,16 +183,16 @@ class Config(object):
     LEARNING_MOMENTUM = 0.9
 
     # Weight decay regularization
-    WEIGHT_DECAY = 0.005
+    WEIGHT_DECAY = 0.0001
 
     # Loss weights for more precise optimization.
     # Can be used for R-CNN training setup.
     LOSS_WEIGHTS = {
         "rpn_class_loss": 1.,
-        "rpn_bbox_loss": 2.,
+        "rpn_bbox_loss": 1.,
         "mrcnn_class_loss": 1.,
         "mrcnn_bbox_loss": 1.,
-        "mrcnn_mask_loss": 2.
+        "mrcnn_mask_loss": 1.
     }
 
     # Use RPN ROIs or externally generated ROIs for training
