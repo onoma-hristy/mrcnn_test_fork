@@ -212,11 +212,11 @@ def train(model):
                 augmentation=augmentation,
                 layers='heads')
     print("Train all layers")
- #   model.train(dataset_train, dataset_val,
- #               learning_rate=0.01,
- #               epochs=100,
- #               augmentation=augmentation,
- #               layers='all')
+    model.train(dataset_train, dataset_val,
+                learning_rate=0.01,
+                epochs=100,
+                augmentation=augmentation,
+                layers='all')
 
 #    model.train(dataset_train, dataset_val,
 #                learning_rate=config.LEARNING_RATE,
