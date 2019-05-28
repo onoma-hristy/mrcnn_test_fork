@@ -45,7 +45,7 @@ class Config(object):
     # Number of validation steps to run at the end of every training epoch.
     # A bigger number improves accuracy of validation stats, but slows
     # down the training.
-    VALIDATION_STEPS = 50
+    VALIDATION_STEPS = 60
 
     # Backbone network architecture
     # Supported values are: resnet50, resnet101.
@@ -138,7 +138,7 @@ class Config(object):
     IMAGE_CHANNEL_COUNT = 3
 
     # Image mean (RGB)
-    MEAN_PIXEL = np.array([60.0, 60.0, 60.0])
+    MEAN_PIXEL = np.array([100.0, 100.0, 100.0])
 
     # Number of ROIs per image to feed to classifier/mask heads
     # The Mask RCNN paper uses 512 but often the RPN doesn't generate
