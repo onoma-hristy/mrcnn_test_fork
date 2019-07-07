@@ -45,7 +45,7 @@ class Config(object):
     # Number of validation steps to run at the end of every training epoch.
     # A bigger number improves accuracy of validation stats, but slows
     # down the training.
-    VALIDATION_STEPS = 60 #50
+    VALIDATION_STEPS = 100 #50
 
     # Backbone network architecture
     # Supported values are: resnet50, resnet101.
@@ -127,8 +127,8 @@ class Config(object):
     IMAGE_RESIZE_MODE = "square"
 #    IMAGE_MIN_DIM = 512 #1536
 #    IMAGE_MAX_DIM = 1024 #2048
-    IMAGE_MIN_DIM = 1024
-    IMAGE_MAX_DIM = 1024
+    IMAGE_MIN_DIM = 768
+    IMAGE_MAX_DIM = 768
 
     # Minimum scaling ratio. Checked after MIN_IMAGE_DIM and can force further
     # up scaling. For example, if set to 2 then images are scaled up to double
@@ -195,8 +195,8 @@ class Config(object):
         "rpn_class_loss": 1.,
         "rpn_bbox_loss": 1.,
         "mrcnn_class_loss": 1.,
-        "mrcnn_bbox_loss": 1.,
-        "mrcnn_mask_loss": 1.
+        "mrcnn_bbox_loss": 1.5,
+        "mrcnn_mask_loss": 2.
     }
 
     # Use RPN ROIs or externally generated ROIs for training

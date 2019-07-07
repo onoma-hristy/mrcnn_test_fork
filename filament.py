@@ -215,7 +215,7 @@ def train(model):
     model.train(dataset_train, dataset_val,
                 learning_rate=0.001,
                 epochs=200,
-#                augmentation=augmentation,
+                augmentation=augmentation,
                 layers='all')
 
 #    model.train(dataset_train, dataset_val,
