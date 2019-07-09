@@ -192,15 +192,15 @@ def train(model):
     dataset_val.prepare()
     # Image augmentation
     # http://imgaug.readthedocs.io/en/latest/source/augmenters.html
-    augmentation = iaa.SomeOf((0, 2), [
+augmentation = iaa.SomeOf((0, 4), [
         iaa.Fliplr(0.5),
         iaa.Flipud(0.5),
         iaa.OneOf([iaa.Affine(rotate=90),
                    iaa.Affine(rotate=45),
                    iaa.Affine(rotate=10),
                    iaa.Affine(rotate=5)]),
-        iaa.Multiply((0.8, 1.5)),
-        iaa.GaussianBlur(sigma=(0.0, 5.0))
+        iaa.Multiply((0.6, 0.2)),
+        iaa.GaussianBlur(sigma=(1.0, 3.0)),
     ])
     # *** This training schedule is an example. Update to your needs ***
     # Since we're using a very small dataset, and starting from

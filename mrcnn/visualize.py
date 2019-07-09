@@ -84,7 +84,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
                       scores=None, title="",
                       figsize=(16, 16), ax=None,
                       show_mask=True, show_bbox=True,
-                      colors=None, captions=None):
+                      colors=None, captions=None, show_border=True, show_label=True):
     """
     boxes: [num_instance, (y1, x1, y2, x2, class_id)] in image coordinates.
     masks: [height, width, num_instances]
@@ -140,7 +140,10 @@ def display_instances(image, boxes, masks, class_ids, class_names,
             class_id = class_ids[i]
             score = scores[i] if scores is not None else None
             label = class_names[class_id]
-            caption = "{} {:.3f}".format(label, score) if score else label
+            if show_label:
+         	   caption = "{} {:.3f}".format(label, score) if score else label
+            else:
+         	   caption = ""
         else:
             caption = captions[i]
         ax.text(x1, y1 + 8, caption,
@@ -160,7 +163,10 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         for verts in contours:
             # Subtract the padding and flip (y, x) to (x, y)
             verts = np.fliplr(verts) - 1
-            p = Polygon(verts, facecolor="none", edgecolor=color)
+            if show_border:
+        	    p = Polygon(verts, facecolor="none", edgecolor=color)
+            else:
+        	    p = Polygon(verts, facecolor="none", edgecolor="none")
             ax.add_patch(p)
     ax.imshow(masked_image.astype(np.uint8))
     if auto_show:
