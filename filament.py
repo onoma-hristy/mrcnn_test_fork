@@ -196,8 +196,9 @@ def train(model):
         iaa.Fliplr(0.5),
         iaa.Flipud(0.5),
         iaa.OneOf([iaa.Affine(rotate=90),
-                   iaa.Affine(rotate=180),
-                   iaa.Affine(rotate=270)]),
+                   iaa.Affine(rotate=45),
+                   iaa.Affine(rotate=10),
+                   iaa.Affine(rotate=5)]),
         iaa.Multiply((0.8, 1.5)),
         iaa.GaussianBlur(sigma=(0.0, 5.0))
     ])
@@ -217,7 +218,19 @@ def train(model):
 #                epochs=60,
 #                augmentation=augmentation,
 #                layers='resnet4+')
-    print("Train all layers")
+    print("Train all layers at 0.001")
+    model.train(dataset_train, dataset_val,
+                learning_rate=0.001,
+                epochs=60,
+                augmentation=augmentation,
+                layers='all')
+    print("Train all layers at 0.0005")
+    model.train(dataset_train, dataset_val,
+                learning_rate=0.001,
+                epochs=120,
+                augmentation=augmentation,
+                layers='all')
+    print("Train all layers at 0.0001")
     model.train(dataset_train, dataset_val,
                 learning_rate=0.001,
                 epochs=200,
