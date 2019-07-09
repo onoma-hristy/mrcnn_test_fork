@@ -220,7 +220,7 @@ def train(model):
 #                layers='resnet4+')
     print("Train all layers at 0.001")
     model.train(dataset_train, dataset_val,
-                learning_rate=0.001,
+                learning_rate=0.01,
                 epochs=60,
                 augmentation=augmentation,
                 layers='all')
@@ -232,7 +232,7 @@ def train(model):
                 layers='all')
     print("Train all layers at 0.0001")
     model.train(dataset_train, dataset_val,
-                learning_rate=0.001,
+                learning_rate=0.0001,
                 epochs=200,
                 augmentation=augmentation,
                 layers='all')
