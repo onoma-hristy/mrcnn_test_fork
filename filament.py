@@ -192,7 +192,7 @@ def train(model):
     dataset_val.prepare()
     # Image augmentation
     # http://imgaug.readthedocs.io/en/latest/source/augmenters.html
-augmentation = iaa.SomeOf((0, 4), [
+    augmentation = iaa.SomeOf((0, 4), [
         iaa.Fliplr(0.5),
         iaa.Flipud(0.5),
         iaa.OneOf([iaa.Affine(rotate=90),
@@ -220,14 +220,8 @@ augmentation = iaa.SomeOf((0, 4), [
 #                layers='resnet4+')
     print("Train all layers at 0.001")
     model.train(dataset_train, dataset_val,
-                learning_rate=0.01,
-                epochs=60,
-                augmentation=augmentation,
-                layers='all')
-    print("Train all layers at 0.0005")
-    model.train(dataset_train, dataset_val,
                 learning_rate=0.001,
-                epochs=120,
+                epochs=100,
                 augmentation=augmentation,
                 layers='all')
     print("Train all layers at 0.0001")
