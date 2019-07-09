@@ -211,12 +211,12 @@ def train(model):
                 epochs=20,
                 augmentation=augmentation,
                 layers='heads')
-    print("Train Resnet 4+")
-    model.train(dataset_train, dataset_val,
-                learning_rate=0.001,
-                epochs=60,
-                augmentation=augmentation,
-                layers='resnet4+')
+#    print("Train Resnet 4+")
+#    model.train(dataset_train, dataset_val,
+#                learning_rate=0.001,
+#                epochs=60,
+#                augmentation=augmentation,
+#                layers='resnet4+')
     print("Train all layers")
     model.train(dataset_train, dataset_val,
                 learning_rate=0.001,
