@@ -2552,8 +2552,7 @@ class MaskRCNN():
         masks: [H, W, N] instance binary masks
         """
         assert self.mode == "inference", "Create model in inference mode."
-        assert len(molded_images) == self.config.BATCH_SIZE,\
-            "Number of images must be equal to BATCH_SIZE"
+        assert len(molded_images) == self.config.BATCH_SIZE, "Number of images must be equal to BATCH_SIZE"
 
         if verbose:
             log("Processing {} images".format(len(molded_images)))
