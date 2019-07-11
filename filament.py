@@ -28,16 +28,19 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
 """
 import cv2
 import os
+import glob
 import sys
 import json
 import datetime
 import numpy as np
 import skimage.draw
 import skimage.io
+from pylab import array, plot, show, axis, arange, figure, uint8 
 from imgaug import augmenters as iaa
 from mrcnn import visualize
 from mrcnn.visualize import display_images
 import matplotlib.pyplot as plt
+from scipy import signal
 # Root directory of the project
 ROOT_DIR = os.path.abspath(".")
 
@@ -212,31 +215,31 @@ def train(model):
                 epochs=20,
                 augmentation=augmentation,
                 layers='heads')
-#    print("Train Resnet 4+")
-#    model.train(dataset_train, dataset_val,
-#                learning_rate=0.001,
-#                epochs=60,
-#                augmentation=augmentation,
-#                layers='resnet4+')
     print("Train all layers at 0.001")
     model.train(dataset_train, dataset_val,
                 learning_rate=0.001,
+                epochs=100,
+                augmentation=augmentation,
+                layers='resnet4+')
+    print("Train all layers at 0.005")
+    model.train(dataset_train, dataset_val,
+                learning_rate=0.0005,
                 epochs=200,
                 augmentation=augmentation,
                 layers='all')
-#    print("Train all layers at 0.0001")
-##    model.train(dataset_train, dataset_val,
- #               learning_rate=0.0001,
- #               epochs=200,
- #               augmentation=augmentation,
- #               layers='all')
+    print("Train all layers at 0.0001")
+    model.train(dataset_train, dataset_val,
+                learning_rate=0.0001,
+                epochs=400,
+                augmentation=augmentation,
+                layers='all')
 
 #    model.train(dataset_train, dataset_val,
 #                learning_rate=config.LEARNING_RATE,
 #                epochs=100,
 #                layers='all')
 
-def color_splash(image, mask):
+'''def color_splash(image, mask):
     """Apply color splash effect.
     image: RGB image [height, width, 3]
     mask: instance segmentation mask [height, width, instance count]
@@ -306,36 +309,128 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
                 count += 1
         vwriter.release()
     print("Saved to ", file_name)
+'''
 
+def threshold(image):
+    def thresh(a, b, max_value, C):
+        return max_value if a > b - C else 0
+
+    def mask(a,b):
+        return a if b > 100 else 0
+
+    def unmask(a,b,c):
+        return b if c > 100 else a
+
+    v_unmask = np.vectorize(unmask)
+    v_mask = np.vectorize(mask)
+    v_thresh = np.vectorize(thresh)
+
+    def block_size(size):
+        block = np.ones((size, size), dtype='d')
+        block[int((size-1)/2), int((size-1)/2)] = 0
+        return block
+
+    def get_number_neighbours(mask,block):
+        '''returns number of unmasked neighbours of every element within block'''
+        mask = mask / 255.0
+        return signal.convolve2d(mask, block, mode='same', boundary='symm')
+
+    def masked_adaptive_threshold(image,mask,max_value,size,C):
+        '''thresholds only using the unmasked elements'''
+        block = block_size(size)
+        conv = signal.convolve2d(image, block, mode='same', boundary='symm')
+        mean_conv = conv / get_number_neighbours(mask,block)
+        return v_thresh(image, mean_conv, max_value,C)
+
+    mask = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 69, 4)
+    mask = cv2.bitwise_not(mask)
+    original_image = np.asarray(image)
+    mask = np.asarray(mask)
+    image = v_mask(original_image, mask)
+    image = masked_adaptive_threshold(image,mask,max_value=255,size=9,C=4)
+    image = v_unmask(original_image, image, mask)
+    image = image.astype(np.uint8)
+    return image
+
+
+def segment_filament(mask, image, image_path=None):
+    if image_path:
+    	if mask.shape[-1] > 0:
+    		mask = (np.sum(mask, -1, keepdims=True) >= 1) 		
+    		binary = np.zeros_like(image, dtype=np.uint8)
+    		binary.fill(255)
+    		binary = np.where(mask, image, binary)
+    		binary = cv2.cvtColor(binary, cv2.COLOR_BGR2GRAY)
+    		filament = threshold(binary)
+    		cv2.imwrite(image_path,filament)
+        
+def batch_detect(model, dir_path=None):
+    files = glob.glob(dir_path+"*.png")
+    for x in files:
+    	detect_filament(model, x)
+    
 def detect_filament(model, image_path=None):
     assert image_path
 
     if image_path:
-        # Run model detection and generate the color splash effect
-        print("Running on {}".format(args.image))
-        # Read image
-        image = skimage.io.imread(args.image)
-        # Detect objects
-        r = model.detect([image], verbose=1)[0]
-        mask = r['masks']
-	# Compute Bounding box
-        bbox = utils.extract_bboxes(mask)
-        # Color splash
-        rect = r['rois']
-        print(rect)
+#    	for i in range(0,2):
+	        file_ext = str(image_path).split('/')
+	        filename = file_ext[-1].split('.')    
+	        
+	        # Run model detection
+	        log_filename = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}.txt".format(datetime.datetime.now())
+	        log_file = open(log_filename, "a")
+        	log_image_name = "File Name:  {}".format(file_ext[-1])
+        	print(log_image_name, file=log_file)
+#        	with open(log_file, "a") as myfile:
+#        		myfile.write(log_filename)
+        	start_time = datetime.datetime.now()
+        	# Read image
+        	image = skimage.io.imread(image_path)
+        	# Detect objects
+        	r = model.detect([image], verbose=1)[0]
+        	end_time = datetime.datetime.now()
+        	duration = end_time-start_time
+        	mask = r['masks']
+		# Compute Bounding box
+        	bbox = utils.extract_bboxes(mask)
+        	# Color splash
+        	rect = r['rois']
+        	print("Detection Duration: "+ str(duration), file=log_file)       
+        	print("Bounding Boxes", file=log_file)
+        	print(rect, file=log_file)
+        	file_name_binary = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_binary.png".format(start_time)
+        	start_time = datetime.datetime.now()
+        	segment_filament(mask, image, file_name_binary) 
+        	end_time = datetime.datetime.now()
+        	duration = end_time-start_time
+        	print("Segmentation Duration: "+ str(duration), file=log_file)       	
+        	log_file.close()
 #        cv2.imshow('med',image)
 #        closeWindow = -1
 #        while closeWindow<0:
 #            closeWindow = cv2.waitKey(1) 
 #        cv2.destroyAllWindows()
-        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], r['scores'], 
-                              title="Predictions",show_mask=False, show_bbox=True)
-        # Save output
-        file_name = "detect_{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
-        for i in range(0,len(rect)):
-	        cv2.rectangle(image,((rect[i][1]-10),(rect[i][0]-10)),((rect[i][3]+10),(rect[i][2]+10)),(255,255,255),1)
-        cv2.imwrite(file_name, image)
 
+#save boundary
+        	file_name = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_border.png".format(start_time)
+        	visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], r['scores'],  title="Boundary Prediction",show_mask=False, show_bbox=False, captions=False, show_border="black", show_label=False, save_image=file_name)
+
+#save mask                              
+        	file_name_mask = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_mask.png".format(start_time)
+        	visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], r['scores'], title="Mask Prediction",show_mask=True, show_bbox=False, captions=False, show_border=False, show_label=False, save_image=file_name_mask)
+
+#save bounding box                              
+        	file_name_box = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_bbox.png".format(start_time)
+        	visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], r['scores'], title="Bounding Box Prediction",show_mask=False, show_bbox=False, colors=None, captions=None, show_border=True, show_label=False)
+        	for i in range(0,len(rect)):
+	        	cv2.rectangle(image,((rect[i][1]-10),(rect[i][0]-10)),((rect[i][3]+10),(rect[i][2]+10)),(255,255,255),2)
+        	cv2.imwrite(file_name_box, image)
+
+#        file_name2 = "results/detect_{:%Y%m%dT%H%M%S}_mask.png".format(datetime.datetime.now())
+#        cv2.imwrite(file_name2, image)
+#        for i in range(0,len(rect)):
+#	        cv2.rectangle(image,((rect[i][1]-10),(rect[i][0]-10)),((rect[i][3]+10),(rect[i][2]+10)),(255,255,255),1)
 #        skimage.io.imsave(file_name, image)
 #    print("Saved to ", file_name)
 
@@ -365,18 +460,21 @@ if __name__ == '__main__':
                         help='Logs and checkpoints directory (default=logs/)')
     parser.add_argument('--image', required=False,
                         metavar="path or URL to image",
-                        help='Image to apply the color splash effect on')
+                        help='Image to apply the detection')
     parser.add_argument('--video', required=False,
                         metavar="path or URL to video",
-                        help='Video to apply the color splash effect on')
+                        help='Image to apply the detection')
+    parser.add_argument('--dir', required=False,
+                        metavar="path to batch image detection",
+                        help='Image to apply the detection')                        
     args = parser.parse_args()
 
     # Validate arguments
     if args.command == "train":
         assert args.dataset, "Argument --dataset is required for training"
-    elif args.command == "splash":
-        assert args.image or args.video,\
-               "Provide --image or --video to apply color splash"
+###    elif args.command == "splash":
+###        assert args.image or args.video,\
+###               "Provide --image or --video to apply color splash"
     elif args.command == "detect":
         assert args.image,\
                "Provide --image to detect filament"
@@ -434,11 +532,13 @@ if __name__ == '__main__':
     # Train or evaluate
     if args.command == "train":
         train(model)
-    elif args.command == "splash":
-        detect_and_color_splash(model, image_path=args.image,
-                                video_path=args.video)
+###    elif args.command == "splash":
+###        detect_and_color_splash(model, image_path=args.image,
+###                                video_path=args.video)
     elif args.command == "detect":
         detect_filament(model, image_path=args.image)                                
+    elif args.command == "batch":
+        batch_detect(model, dir_path=args.dir)           
     else:
         print("'{}' is not recognized. "
               "Use 'train' or 'splash'".format(args.command))
