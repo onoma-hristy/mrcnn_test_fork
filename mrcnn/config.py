@@ -124,11 +124,12 @@ class Config(object):
     #         on IMAGE_MIN_DIM and IMAGE_MIN_SCALE, then picks a random crop of
     #         size IMAGE_MIN_DIM x IMAGE_MIN_DIM. Can be used in training only.
     #         IMAGE_MAX_DIM is not used in this mode.
-    IMAGE_RESIZE_MODE = "square"
+"""    IMAGE_RESIZE_MODE = "square"
     IMAGE_MIN_DIM = 1024 #for test phase
-    IMAGE_MAX_DIM = 1024 #for test phase
-#    IMAGE_MIN_DIM = 768
-#    IMAGE_MAX_DIM = 768
+    IMAGE_MAX_DIM = 1024 #for test phase"""
+    IMAGE_RESIZE_MODE = "crop"
+    IMAGE_MIN_DIM = 768
+    IMAGE_MAX_DIM = 768
 
     # Minimum scaling ratio. Checked after MIN_IMAGE_DIM and can force further
     # up scaling. For example, if set to 2 then images are scaled up to double
