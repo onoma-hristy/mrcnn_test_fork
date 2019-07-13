@@ -209,7 +209,8 @@ def train(model):
     # Since we're using a very small dataset, and starting from
     # COCO trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
-"""    print("Training network heads")
+    """	
+    print("Training network heads")
     model.train(dataset_train, dataset_val,
                 learning_rate=0.01,
                 epochs=20,
