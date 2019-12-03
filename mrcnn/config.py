@@ -101,8 +101,8 @@ class Config(object):
 
     # If enabled, resizes instance masks to a smaller size to reduce
     # memory load. Recommended when using high-resolution images.
-    USE_MINI_MASK = False
-    MINI_MASK_SHAPE = (30, 30)  # (height, width) of the mini-mask
+    USE_MINI_MASK = True
+    MINI_MASK_SHAPE = (32, 32)  # (height, width) of the mini-mask
 
     # Input image resizing
     # Generally, use the "square" resizing mode for training and predicting
@@ -193,11 +193,11 @@ class Config(object):
     # Loss weights for more precise optimization.
     # Can be used for R-CNN training setup.
     LOSS_WEIGHTS = {
-        "rpn_class_loss": 1.,
-        "rpn_bbox_loss": 1.,
-        "mrcnn_class_loss": 1.,
-        "mrcnn_bbox_loss": 1.,
-        "mrcnn_mask_loss": 1.
+        "rpn_class_loss": 0.5,
+        "rpn_bbox_loss": 0.5,
+        "mrcnn_class_loss": 0.5,
+        "mrcnn_bbox_loss": 0.5,
+        "mrcnn_mask_loss": 0.5
     }
 
     # Use RPN ROIs or externally generated ROIs for training

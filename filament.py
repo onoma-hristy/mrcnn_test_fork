@@ -210,25 +210,25 @@ def train(model):
     # COCO trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
     
-"""    print("Training network heads")
-    model.train(dataset_train, dataset_val,
-                learning_rate=0.01,
-                epochs=20,
-                augmentation=augmentation,
-                layers='heads')
+#    print("Training network heads")
+#    model.train(dataset_train, dataset_val,
+#                learning_rate=0.01,
+#                epochs=20,
+#                augmentation=augmentation,
+#                layers='heads')
     print("Train all layers at 0.001")
     model.train(dataset_train, dataset_val,
                 learning_rate=0.001,
-                epochs=50,
-                augmentation=augmentation,
-                layers='resnet4+')"""
-    print("Train all layers at 0.001")
-    model.train(dataset_train, dataset_val,
-                learning_rate=0.001,
-                epochs=50,
-                #augmentation=augmentation,
+                epochs=100,
+#                augmentation=augmentation,
                 layers='all')
-    print("Train all layers at 0.0005")
+#    print("Train all layers at 0.001")
+#    model.train(dataset_train, dataset_val,
+#                learning_rate=0.001,
+#                epochs=100,
+                #augmentation=augmentation,
+#                layers='all')
+#    print("Train all layers at 0.0005")
     model.train(dataset_train, dataset_val,
                 learning_rate=0.0005,
                 epochs=100,
