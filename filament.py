@@ -94,7 +94,9 @@ class filamentDataset(utils.Dataset):
         """
         # Add classes. We have only one class to add.
         self.add_class("filament", 1, "filament")
-
+        self.add_class("prominence", 2, "prominence")
+        self.add_class("sunspot", 3, "sunspot")
+        self.add_class("plage", 4, "plage")
         # Train or validation dataset?
         assert subset in ["train", "val"]
         dataset_dir = os.path.join(dataset_dir, subset)
