@@ -73,7 +73,7 @@ class filamentConfig(Config):
     IMAGES_PER_GPU = 2
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 1  # Background + filament
+    NUM_CLASSES = 1 + 4  # Background + filament
 
     # Number of training steps per epoch
     STEPS_PER_EPOCH = 100
@@ -216,12 +216,12 @@ def train(model):
 #                epochs=20,
 #                augmentation=augmentation,
 #                layers='heads')
-    print("Train all layers at 0.001")
-    model.train(dataset_train, dataset_val,
-                learning_rate=0.001,
-                epochs=100,
+#    print("Train all layers at 0.001")
+#    model.train(dataset_train, dataset_val,
+#                learning_rate=0.001,
+#                epochs=100,
 #                augmentation=augmentation,
-                layers='all')
+#                layers='all')
 #    print("Train all layers at 0.001")
 #    model.train(dataset_train, dataset_val,
 #                learning_rate=0.001,
@@ -230,7 +230,7 @@ def train(model):
 #                layers='all')
 #    print("Train all layers at 0.0005")
     model.train(dataset_train, dataset_val,
-                learning_rate=0.0005,
+                learning_rate=0.001,
                 epochs=100,
                # augmentation=augmentation,
                 layers='all')

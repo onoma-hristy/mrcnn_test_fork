@@ -70,7 +70,7 @@ class Config(object):
     TOP_DOWN_PYRAMID_SIZE = 256
 
     # Number of classification classes (including background)
-    NUM_CLASSES = 1  # Override in sub-classes
+    NUM_CLASSES = 5  # Override in sub-classes
 
     # Length of square anchor side in pixels
 #    RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)
@@ -188,7 +188,7 @@ class Config(object):
     LEARNING_MOMENTUM = 0.9
 
     # Weight decay regularization
-    WEIGHT_DECAY = 0.001
+    WEIGHT_DECAY = 0.0001
 
     # Loss weights for more precise optimization.
     # Can be used for R-CNN training setup.
