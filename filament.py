@@ -130,11 +130,21 @@ class filamentDataset(utils.Dataset):
             # the outline of each object instance. These are stores in the
             # shape_attributes (see json format above)
             # The if condition is needed to support VIA versions 1.x and 2.x.
-            if type(a['regions']) is dict:
-                polygons = [r['shape_attributes'] for r in a['regions'].values()]
-            else:
-                polygons = [r['shape_attributes'] for r in a['regions']] 
-
+            #if type(a['regions']) is dict:
+            #    polygons = [r['shape_attributes'] for r in a['regions'].values()]
+            #else:
+            #    polygons = [r['shape_attributes'] for r in a['regions']] 
+            for r in a['regions']:
+                if r['region_attributes']['filament']=="filament":
+                	class_no = 1
+                elif r['region_attributes']['filament']=="prominence":
+                	class_no = 2
+                elif r['region_attributes']['filament']=="sunspot":
+                	class_no = 3
+                else:
+                	class_no = 4                                
+                r['shape_attributes']['class']=class_no
+                polygons = [r['shape_attributes'] for r in a['regions']]
             # load_mask() needs the image size to convert polygons to masks.
             # Unfortunately, VIA doesn't include it in JSON, so we must read
             # the image. This is only managable since the dataset is tiny.
@@ -164,6 +174,7 @@ class filamentDataset(utils.Dataset):
         # Convert polygons to a bitmap mask of shape
         # [height, width, instance_count]
         info = self.image_info[image_id]
+        polygons = info['polygons']
         mask = np.zeros([info["height"], info["width"], len(info["polygons"])],
                         dtype=np.uint8)
         for i, p in enumerate(info["polygons"]):
@@ -173,8 +184,11 @@ class filamentDataset(utils.Dataset):
 
         # Return mask, and array of class IDs of each instance. Since we have
         # one class ID only, we return an array of 1s
-        return mask.astype(np.bool), np.ones([mask.shape[-1]], dtype=np.int32)
-
+        #return mask.astype(np.bool), np.ones([mask.shape[-1]], dtype=np.int32)
+        class_ids = np.array([s['class'] for s in polygons])
+        return mask, class_ids.astype(np.int32)
+        
+        
     def image_reference(self, image_id):
         """Return the path of the image."""
         info = self.image_info[image_id]
