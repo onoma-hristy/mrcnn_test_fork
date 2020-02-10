@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from scipy import signal
 from mrcnn.config import Config
 from mrcnn import model as modellib, utils
-
+from skimage.morphology import skeletonize
 ROOT_DIR = os.path.abspath(".")
 sys.path.append(ROOT_DIR)
 COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
@@ -151,7 +151,7 @@ def train(model):
 #                learning_rate=config.LEARNING_RATE,
 #                epochs=100,
 #                layers='all')
-
+"""
 def threshold(image):
     def thresh(a, b, max_value, C):
         return max_value if a > b - C else 0
@@ -192,13 +192,83 @@ def threshold(image):
     image = v_unmask(original_image, image, mask)
     image = image.astype(np.uint8)
     return image
+"""
+def detect_disk(img):
+    if(len(img.shape)>2):
+	    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1.8, 500)
+    if circles is not None:
+    	circles = np.round(circles[0, :]).astype("int")
+    	true_r = 0
+    	true_x = 0
+    	true_y = 0
+    	maxcircle = np.where(circles[:,2]==np.amax(circles[:,2]))
+    	x,y,r=circles[maxcircle[0]][0]
+    	if  r<400 and r>250 and (x>300 and x<700) and (y>300 and y<420):
+    		true_r = r
+    		true_x = x
+    		true_y = y
+    	return true_x, true_y, true_r	
+    else:
+    	print("No disk detected in the image ")
+    	true_r = 0
+    	true_x = 0
+    	true_y = 0
+    	return true_x, true_y, true_r
 
+def remove_pixel(image,padding,iters):
+	mask = np.zeros((image.shape[0]+4,image.shape[1]+4))
+	mask[2:-2,2:-2] = np.invert(image)
+	mask_0 = mask.copy()
+	for w in range(iters):  
+	    for y in range(padding,len(mask)-padding):
+	        for x in range(padding,len(mask[y])-padding):
+	            if (mask[y,x] > 0): #4-pixel connectivity
+	            	temp = mask_0[y-padding-1:y+padding+2,x-padding-1:x+padding+2]
+	            	sums = np.sum(temp)
+	            	if(sums <= (255*2)): #remove adjacent pixels
+	            		mask[y,x] = 0
+#	                mask[y,x] = 255
+	    mask_0=mask
+	return mask[1:-1,1:-1].astype(np.uint8)
 
+def four_conn(image,padding,iters):
+	image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	mask = np.zeros((image.shape[0]+2,image.shape[1]+2))
+	mask[1:-1,1:-1] = np.invert(image)
+	mask_0 = mask.copy()	
+	for w in range(iters):
+	    for y in range(padding,len(mask)-padding):
+	        for x in range(padding,len(mask[y])-padding):
+	            if (mask[y,x] <= 0): #4-pixel connectivity
+	            	sums = []
+	            	sums.append(mask_0[y-1,x-1] + mask_0[y+1,x+1])
+	            	sums.append(mask_0[y-1,x] + mask_0[y+1,x])
+	            	sums.append(mask_0[y-1,x+1] + mask_0[y+1,x-1])
+	            	sums.append(mask_0[y,x-1] + mask_0[y,x+1])
+	            	sums.append(mask_0[y-1,x-1] + mask_0[y,x+1])
+	            	sums.append(mask_0[y-1,x] + mask_0[y+1,x-1])
+	            	sums.append(mask_0[y-1,x] + mask_0[y+1,x+1])
+	            	sums.append(mask_0[y,x-1] + mask_0[y-1,x+1])
+	            	if(max(sums)>=(255*2)):
+	            		mask[y,x] = 255
+	    mask_0=mask	  
+	return mask[1:-1,1:-1].astype(np.uint8)
+
+def threshold(image):
+	ret, img = cv2.threshold(image, 0.95*np.mean(image), 255,cv2.THRESH_TRUNC) 
+	ret2, img2 = cv2.threshold(img, np.mean(img), 255,cv2.THRESH_BINARY)
+	mask = four_conn(img2,1,1)
+	mask2 = remove_pixel(np.invert(mask),1,2)
+	skel = skeletonize(np.where(np.array(mask2, dtype=bool),True==1,0))
+	return np.invert(mask2[1:-1,1:-1]), np.invert(skel[1:-1,1:-1])	
+    	
 def segment_filament(r, image):
     if r['masks'].shape[-1] > 0:
     	binary_slices = []
     	masked_slices = []
     	original_slices = []
+    	skeleton = []
     	mask = (np.sum(r['masks'], -1, keepdims=True) >= 1) 		
     	masked_area = np.zeros_like(image, dtype=np.uint8)
     	masked_area.fill(255)
@@ -211,16 +281,20 @@ def segment_filament(r, image):
     		if r['class_ids'][i] == 1: # 1 is filaments
     			slices = np.copy(masked_area[x[0]:x[2],x[1]:x[3]])
     			slices_ori = np.copy(image[x[0]:x[2],x[1]:x[3]])
-    			filament = threshold(slices)
+    			filament_ori = threshold(slices_ori)
+    			filament = np.where(mask[x[0]:x[2],x[1]:x[3],0], filament_ori[0],255)
+    			spine = np.where(mask[x[0]:x[2],x[1]:x[3],0], filament_ori[1],1)
+    			spine = np.where(spine==1,255,0)
     			binary_fullsize[x[0]:x[2],x[1]:x[3]]=filament
     			binary_slices.append(filament)
     			masked_slices.append(slices)
     			original_slices.append(slices_ori)
+    			skeleton.append(spine)
     		else:
     			binary_slices.append([r['class_ids'][i]])
     			masked_slices.append([r['class_ids'][i]])
     			original_slices.append([r['class_ids'][i]])
-    	return binary_fullsize, masked_area, binary_slices, masked_slices, original_slices
+    	return binary_fullsize, masked_area, binary_slices, masked_slices, original_slices,skeleton
         
 def batch_detect(model, dir_path=None):
     files = glob.glob(dir_path+"*.png")
@@ -245,7 +319,8 @@ def detect_filament(model, image_path=None):
         start_time = datetime.datetime.now()
 
         image = skimage.io.imread(image_path)
-
+        c = detect_disk(image)
+	
         r = model.detect([image], verbose=1)[0]
         end_time = datetime.datetime.now()
         duration = end_time-start_time
@@ -254,7 +329,8 @@ def detect_filament(model, image_path=None):
         class_id = r['class_ids']
         print("Detection Duration:", file=log_file)  
         print(str(duration), file=log_file)        	
-        print("Solar Disk:", file=log_file)        	     
+        print("Solar Disk (x, y, radius):", file=log_file)
+        print(c, file=log_file)        	     
         print("Classes:", file=log_file)
         print(class_id, file=log_file)       	        	
         print("Bounding Boxes:", file=log_file)
@@ -303,6 +379,19 @@ def detect_filament(model, image_path=None):
 				(rect[i][2])),(255,255,255),2)
         	cv2.imwrite(file_name_box, image)
 
+	#save spine
+        file_name_spine = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_spine.png".format(start_time)
+        image_spine = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
+        image_spine.fill(255)
+        ss=0
+        for s in range(len(rect)):
+        	if r['class_ids'][s] == 1:
+        		spine = binary[5][ss]
+        		image_spine[rect[s][0]:rect[s][2],rect[s][1]:rect[s][3]] = spine
+        		ss+=1
+        cv2.circle(image_spine, (c[0], c[1]), c[2], (0,0,0), 1)
+        cv2.imwrite(file_name_spine, image_spine)
+        
 	#save final visualization
         file_name_final = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_final.png".format(start_time)
         image_final = img_border.copy()
@@ -310,6 +399,7 @@ def detect_filament(model, image_path=None):
             if r['class_ids'][jj] != 1:
             	cv2.rectangle(image_final,((box[1]-10),(box[0]-10)),((box[3]+10),
 				(box[2]+10)),(255,255,255),1)
+        cv2.circle(image_final, (c[0], c[1]), c[2], (68,1,84), 1)
         cv2.imwrite(file_name_final, image_final)
 
         total_duration_end = datetime.datetime.now()
