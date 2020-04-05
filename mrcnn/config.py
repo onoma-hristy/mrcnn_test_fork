@@ -74,7 +74,7 @@ class Config(object):
 
     # Length of square anchor side in pixels
 #    RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)
-    RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)
+    RPN_ANCHOR_SCALES = (16, 32, 64, 128,256)
 
     # Ratios of anchors at each cell (width/height)
     # A value of 1 represents a square anchor, and 0.5 is a wide anchor
@@ -124,13 +124,14 @@ class Config(object):
     #         on IMAGE_MIN_DIM and IMAGE_MIN_SCALE, then picks a random crop of
     #         size IMAGE_MIN_DIM x IMAGE_MIN_DIM. Can be used in training only.
     #         IMAGE_MAX_DIM is not used in this mode.
-    """IMAGE_RESIZE_MODE = "square"
+    IMAGE_RESIZE_MODE = "square"
     IMAGE_MIN_DIM = 1024 #for test phase
-    IMAGE_MAX_DIM = 1024 #for test phase"""
+    IMAGE_MAX_DIM = 1024 #for test phase
+    """
     IMAGE_RESIZE_MODE = "square"
     IMAGE_MIN_DIM = 768
     IMAGE_MAX_DIM = 768
-
+    """
     # Minimum scaling ratio. Checked after MIN_IMAGE_DIM and can force further
     # up scaling. For example, if set to 2 then images are scaled up to double
     # the width and height, or more, even if MIN_IMAGE_DIM doesn't require it.
@@ -142,7 +143,8 @@ class Config(object):
     IMAGE_CHANNEL_COUNT = 3
 
     # Image mean (RGB)
-    MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
+#    MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
+    MEAN_PIXEL = np.array([45.0, 45.0, 45.0])
 
     # Number of ROIs per image to feed to classifier/mask heads
     # The Mask RCNN paper uses 512 but often the RPN doesn't generate
@@ -163,18 +165,18 @@ class Config(object):
     MASK_SHAPE = [28, 28]
 
     # Maximum number of ground truth instances to use in one image
-    MAX_GT_INSTANCES = 30
+    MAX_GT_INSTANCES = 100
 
     # Bounding box refinement standard deviation for RPN and final detections.
     RPN_BBOX_STD_DEV = np.array([0.1, 0.1, 0.2, 0.2])
     BBOX_STD_DEV = np.array([0.1, 0.1, 0.2, 0.2])
 
     # Max number of final detections
-    DETECTION_MAX_INSTANCES = 30
+    DETECTION_MAX_INSTANCES = 100
 
     # Minimum probability value to accept a detected instance
     # ROIs below this threshold are skipped
-    DETECTION_MIN_CONFIDENCE = 0.8
+    DETECTION_MIN_CONFIDENCE = 0.7
 
     # Non-maximum suppression threshold for detection
 #    DETECTION_NMS_THRESHOLD = 0.3
@@ -194,9 +196,9 @@ class Config(object):
     # Can be used for R-CNN training setup.
     LOSS_WEIGHTS = {
         "rpn_class_loss": 1.,
-        "rpn_bbox_loss": 0.5,
+        "rpn_bbox_loss": 1.,
         "mrcnn_class_loss": 1.,
-        "mrcnn_bbox_loss": 0.5,
+        "mrcnn_bbox_loss": 1.,
         "mrcnn_mask_loss": 1.
     }
 

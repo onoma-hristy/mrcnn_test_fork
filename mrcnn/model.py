@@ -888,7 +888,7 @@ def build_rpn_model(anchor_stride, anchors_per_location, depth):
                 applied to anchors.
     """
     input_feature_map = KL.Input(shape=[None, None, depth],
-                                 name="input_rpn_feature_map")
+                                 name="input_rpn_feature_map")                                
     outputs = rpn_graph(input_feature_map, anchors_per_location, anchor_stride)
     return KM.Model([input_feature_map], outputs, name="rpn_model")
 
