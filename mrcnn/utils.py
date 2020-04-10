@@ -21,6 +21,8 @@ import skimage.transform
 import urllib.request
 import shutil
 import warnings
+import cv2
+from skimage import util
 from distutils.version import LooseVersion
 
 # URL from which to download the latest COCO trained weights
@@ -576,6 +578,70 @@ def unmold_mask(mask, bbox, image_shape):
     return full_mask
 
 
+def remove_pixel(image,padding,iters):
+        mask = np.zeros((image.shape[0]+4,image.shape[1]+4))
+        mask[2:-2,2:-2] = np.invert(image)
+        mask_0 = mask.copy()
+        for w in range(iters):  
+            for y in range(padding,len(mask)-padding):
+                for x in range(padding,len(mask[y])-padding):
+                    if (mask[y,x] > 0): #4-pixel connectivity
+                        temp = mask_0[y-padding-1:y+padding+2,x-padding-1:x+padding+2]
+                        sums = np.sum(temp)
+                        if(sums <= (255*2)): #remove adjacent pixels
+                            mask[y,x] = 0
+#	                mask[y,x] = 255
+            mask_0=mask
+        return mask[1:-1,1:-1].astype(np.uint8)
+
+def four_conn(image,padding,iters):
+	#image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        mask = np.zeros((image.shape[0]+2,image.shape[1]+2))
+        mask[1:-1,1:-1] = np.invert(image)
+        mask_0 = mask.copy()	
+        for w in range(iters):
+            for y in range(padding,len(mask)-padding):
+                for x in range(padding,len(mask[y])-padding):
+                    if (mask[y,x] <= 0): #4-pixel connectivity
+                        sums = []
+                        sums.append(mask_0[y-1,x-1] + mask_0[y+1,x+1])
+                        sums.append(mask_0[y-1,x] + mask_0[y+1,x])
+                        sums.append(mask_0[y-1,x+1] + mask_0[y+1,x-1])
+                        sums.append(mask_0[y,x-1] + mask_0[y,x+1])
+                        sums.append(mask_0[y-1,x-1] + mask_0[y,x+1])
+                        sums.append(mask_0[y-1,x] + mask_0[y+1,x-1])
+                        sums.append(mask_0[y-1,x] + mask_0[y+1,x+1])
+                        sums.append(mask_0[y,x-1] + mask_0[y-1,x+1])
+                        if(max(sums)>=(255*2)):
+                            mask[y,x] = 255
+            mask_0=mask	  
+        return mask[1:-1,1:-1].astype(np.uint8)
+
+def alt_thresh2(image):
+        image = util.img_as_ubyte(image)
+        thresh1 = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
+        mask = four_conn(thresh1,1,1)
+        mask2 = remove_pixel(np.invert(mask),1,3)
+        return thresh1 #np.invert(mask2[1:-1,1:-1])
+
+def pad(vector, pad_width, iaxis, kwargs):
+        vector[:pad_width[0]] = 255
+        vector[-pad_width[1]:] = 255
+
+def generate_pixel_target(image, image_boxes, mask):
+    image_gt = np.zeros([image_boxes.shape[0], 196], dtype=np.int32)
+    for i,xx in enumerate(image_boxes):
+            slices_ori = image[:,:,1][xx[0]:xx[2],xx[1]:xx[3]]
+            sliced_mask = mask[0][xx[0]:xx[2],xx[1]:xx[3]] 
+            thresh2 = alt_thresh2(slices_ori)
+            gt = thresh2
+            gt =  np.where(gt == 255,1,0)
+            gt = skimage.transform.resize(gt.astype(np.float32),(14,14))
+            image_gt[i] = gt.flatten()
+                   
+    #image_gt = np.asarray(image_gt)
+    return image_gt
+                             
 ############################################################
 #  Anchors
 ############################################################
