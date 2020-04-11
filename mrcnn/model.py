@@ -1289,10 +1289,10 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
     # bbox: [num_instances, (y1, x1, y2, x2)]
 
     bbox = utils.extract_bboxes(mask)
-    #start = datetime.datetime.now()
-    #pixel_mask, ext_mask = utils.generate_pixel_masks(bbox,mask,image,config.MASK_POOL_SIZE)
-    #end = datetime.datetime.now()
-    #print(str(end-start))
+    start = datetime.datetime.now()
+    pixel_mask, ext_mask = utils.generate_pixel_masks(bbox,mask,image,config.MASK_POOL_SIZE)
+    end = datetime.datetime.now()
+    print(str(end-start))
     
     # Active classes
     # Different datasets have different classes, so track the
