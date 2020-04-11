@@ -24,7 +24,7 @@ DEFAULT_RESULTS_DIR = os.path.join(ROOT_DIR, "results/")
 
 class filamentConfig(Config):
     NAME = "filament"
-    IMAGES_PER_GPU = 1
+    IMAGES_PER_GPU = 2
     NUM_CLASSES = 1 + 4  # Background + filament
     STEPS_PER_EPOCH = 100
     DETECTION_MIN_CONFIDENCE = 0.9
