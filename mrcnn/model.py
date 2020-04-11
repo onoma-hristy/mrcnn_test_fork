@@ -1289,10 +1289,10 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
     # bbox: [num_instances, (y1, x1, y2, x2)]
 
     bbox = utils.extract_bboxes(mask)
-    start = datetime.datetime.now()
-    pixel_mask, ext_mask = utils.generate_pixel_masks(bbox,mask,image,config.MASK_POOL_SIZE)
-    end = datetime.datetime.now()
-    print(str(end-start))
+    #start = datetime.datetime.now()
+    #pixel_mask, ext_mask = utils.generate_pixel_masks(bbox,mask,image,config.MASK_POOL_SIZE)
+    #end = datetime.datetime.now()
+    #print(str(end-start))
     
     # Active classes
     # Different datasets have different classes, so track the
@@ -2231,8 +2231,8 @@ class MaskRCNN():
             loss = (
                 tf.reduce_mean(layer.output, keep_dims=True)
                 * self.config.LOSS_WEIGHTS.get(name, 1.))
-            self.keras_model.metrics_tensors.append(loss)
-            #self.keras_model.add_metric(loss)
+            #self.keras_model.metrics_tensors.append(loss)
+            self.keras_model.add_metric(loss)
 
     def set_trainable(self, layer_regex, keras_model=None, indent=0, verbose=1):
         """Sets model layers as trainable if their names match
