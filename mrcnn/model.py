@@ -1287,17 +1287,12 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
     # Bounding boxes. Note that some boxes might be all zeros
     # if the corresponding mask got cropped out.
     # bbox: [num_instances, (y1, x1, y2, x2)]
-<<<<<<< HEAD
-=======
-
-    bbox, ext_mask = utils.extract_bboxes(mask,image, class_ids)
->>>>>>> 9d2d82196c30718ec2d0ec0c45882400385889ea
 
     bbox = utils.extract_bboxes(mask)
-    start = datetime.datetime.now()
-    pixel_mask, ext_mask = utils.generate_pixel_masks(bbox,mask,image,config.MASK_POOL_SIZE)
-    end = datetime.datetime.now()
-    print(str(end-start))
+    #start = datetime.datetime.now()
+    #pixel_mask, ext_mask = utils.generate_pixel_masks(bbox,mask,image,config.MASK_POOL_SIZE)
+    #end = datetime.datetime.now()
+    #print(str(end-start))
     
     # Active classes
     # Different datasets have different classes, so track the
@@ -1314,11 +1309,7 @@ def load_image_gt(dataset, config, image_id, augment=False, augmentation=None,
     image_meta = compose_image_meta(image_id, original_shape, image.shape,
                                     window, scale, active_class_ids)
 
-<<<<<<< HEAD
     return image, image_meta, class_ids, bbox, mask #, pixel_mask
-=======
-    return image, image_meta, class_ids, bbox, ext_mask
->>>>>>> 9d2d82196c30718ec2d0ec0c45882400385889ea
 
 
 def build_detection_targets(rpn_rois, gt_class_ids, gt_boxes, gt_masks, config):

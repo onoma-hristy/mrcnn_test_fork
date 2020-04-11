@@ -23,10 +23,7 @@ import shutil
 import warnings
 from distutils.version import LooseVersion
 import cv2
-<<<<<<< HEAD
 from skimage.transform import resize
-=======
->>>>>>> 9d2d82196c30718ec2d0ec0c45882400385889ea
 
 # URL from which to download the latest COCO trained weights
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
@@ -77,19 +74,11 @@ def four_conn(image,padding,iters):
 def alt_thresh2(image):
 	#image = util.img_as_ubyte(image)
 	thresh1 = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
-<<<<<<< HEAD
 	#mask = four_conn(thresh1,1,1)
 	#mask2 = remove_pixel(np.invert(mask),1,3)
 	return thresh1 #np.invert(mask2[1:-1,1:-1])
 
 def extract_bboxes(mask):
-=======
-	mask = four_conn(thresh1,1,1)
-	mask2 = remove_pixel(np.invert(mask),1,3)
-	return thresh1 #np.invert(mask2[1:-1,1:-1])
-
-def extract_bboxes(mask,image,class_id):
->>>>>>> 9d2d82196c30718ec2d0ec0c45882400385889ea
     """Compute bounding boxes from masks.
     mask: [height, width, num_instances]. Mask pixels are either 1 or 0.
 
@@ -112,21 +101,8 @@ def extract_bboxes(mask,image,class_id):
             # resizing or cropping. Set bbox to zeros
             x1, x2, y1, y2 = 0, 0, 0, 0
         boxes[i] = np.array([y1, x1, y2, x2])
-<<<<<<< HEAD
         
     return boxes.astype(np.int32)
-=======
-        if (class_id[i]==1):
-            slices_ori = image[:,:,1][boxes[i][0]:boxes[i][2],boxes[i][1]:boxes[i][3]]
-            sliced_mask = mask[boxes[i][0]:boxes[i][2],boxes[i][1]:boxes[i][3],i]
-            thresh = alt_thresh2(slices_ori)
-            thresh = np.where(thresh==0,1,0).astype(np.bool)
-            gt = np.zeros_like(sliced_mask)
-            gt[:,:] = np.where(sliced_mask[:,:] == 1,thresh[:,:],0)
-            mask[boxes[i][0]:boxes[i][2],boxes[i][1]:boxes[i][3],i] =  gt
-        
-    return boxes.astype(np.int32), mask.astype(np.bool)
->>>>>>> 9d2d82196c30718ec2d0ec0c45882400385889ea
 
 def generate_pixel_masks(boxes,mask,image,mask_size):
     pixel_mask = np.zeros([boxes.shape[0], mask_size*mask_size], dtype=np.int32)

@@ -435,11 +435,7 @@ if __name__ == '__main__':
     parser.add_argument('--results', required=False,
                         default=DEFAULT_RESULTS_DIR,
                         metavar="/path/to/results/",
-<<<<<<< HEAD
                         help='Detection results directory (default=results/)')                      
-=======
-                        help='Detection reslults directory (default=results/)')                      
->>>>>>> 9d2d82196c30718ec2d0ec0c45882400385889ea
     parser.add_argument('--image', required=False,
                         metavar="path or URL to image",
                         help='Image to apply the detection')
