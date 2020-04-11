@@ -22,6 +22,8 @@ import urllib.request
 import shutil
 import warnings
 from distutils.version import LooseVersion
+import cv2
+from skimage.transform import resize
 
 # URL from which to download the latest COCO trained weights
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
@@ -30,6 +32,51 @@ COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0
 ############################################################
 #  Bounding Boxes
 ############################################################
+def remove_pixel(image,padding,iters):
+	mask = np.zeros((image.shape[0]+4,image.shape[1]+4))
+	mask[2:-2,2:-2] = np.invert(image)
+	mask_0 = mask.copy()
+	for w in range(iters):  
+	    for y in range(padding,len(mask)-padding):
+	        for x in range(padding,len(mask[y])-padding):
+	            if (mask[y,x] > 0): #4-pixel connectivity
+	            	temp = mask_0[y-padding-1:y+padding+2,x-padding-1:x+padding+2]
+	            	sums = np.sum(temp)
+	            	if(sums <= (255*2)): #remove adjacent pixels
+	            		mask[y,x] = 0
+#	                mask[y,x] = 255
+	    mask_0=mask
+	return mask[1:-1,1:-1].astype(np.uint8)
+
+def four_conn(image,padding,iters):
+	#image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	mask = np.zeros((image.shape[0]+2,image.shape[1]+2))
+	mask[1:-1,1:-1] = np.invert(image)
+	mask_0 = mask.copy()	
+	for w in range(iters):
+	    for y in range(padding,len(mask)-padding):
+	        for x in range(padding,len(mask[y])-padding):
+	            if (mask[y,x] <= 0): #4-pixel connectivity
+	            	sums = []
+	            	sums.append(mask_0[y-1,x-1] + mask_0[y+1,x+1])
+	            	sums.append(mask_0[y-1,x] + mask_0[y+1,x])
+	            	sums.append(mask_0[y-1,x+1] + mask_0[y+1,x-1])
+	            	sums.append(mask_0[y,x-1] + mask_0[y,x+1])
+	            	sums.append(mask_0[y-1,x-1] + mask_0[y,x+1])
+	            	sums.append(mask_0[y-1,x] + mask_0[y+1,x-1])
+	            	sums.append(mask_0[y-1,x] + mask_0[y+1,x+1])
+	            	sums.append(mask_0[y,x-1] + mask_0[y-1,x+1])
+	            	if(max(sums)>=(255*2)):
+	            		mask[y,x] = 255
+	    mask_0=mask	  
+	return mask[1:-1,1:-1].astype(np.uint8)
+
+def alt_thresh2(image):
+	#image = util.img_as_ubyte(image)
+	thresh1 = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2)
+	#mask = four_conn(thresh1,1,1)
+	#mask2 = remove_pixel(np.invert(mask),1,3)
+	return thresh1 #np.invert(mask2[1:-1,1:-1])
 
 def extract_bboxes(mask):
     """Compute bounding boxes from masks.
@@ -54,8 +101,23 @@ def extract_bboxes(mask):
             # resizing or cropping. Set bbox to zeros
             x1, x2, y1, y2 = 0, 0, 0, 0
         boxes[i] = np.array([y1, x1, y2, x2])
+        
     return boxes.astype(np.int32)
 
+def generate_pixel_masks(boxes,mask,image,mask_size):
+    pixel_mask = np.zeros([boxes.shape[0], mask_size*mask_size], dtype=np.int32)
+    for i,xx in enumerate(boxes):
+        slices_ori = image[xx[0]:xx[2],xx[1]:xx[3],1]
+        sliced_mask = mask[xx[0]:xx[2],xx[1]:xx[3],i]
+        thresh = alt_thresh2(slices_ori)
+        thresh = np.where(thresh==0,1,0).astype(np.bool)
+        gt = np.zeros_like(slices_ori)
+        gt[:,:] = np.where(sliced_mask[:,:] == 1,thresh[:,:],0)
+        mask[xx[0]:xx[2],xx[1]:xx[3],i] =  gt
+        gt = resize(gt,(mask_size,mask_size))
+        gt_mask=gt.flatten()
+        pixel_mask[i] = gt_mask
+    return pixel_mask, mask      
 
 def compute_iou(box, boxes, box_area, boxes_area):
     """Calculates IoU of the given box with the array of the given boxes.

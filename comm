@@ -1,3 +1,5 @@
 python3 filament.py detect --weights=/home/rei/venv/mask/__versions/v0.9/mask_rcnn_filament_0063.h5 --image=images/normalized_20171007.png
 
 python3 filament.py batch --weights=/home/rei/venv/mask/mrcnn_test/logs/rcnn_156.v.1.6b_RC_lowest_loss.h5 --dir=images/
+
+python3 filament.py summary

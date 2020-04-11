@@ -20,11 +20,11 @@ ROOT_DIR = os.path.abspath(".")
 sys.path.append(ROOT_DIR)
 COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
-
+DEFAULT_RESULTS_DIR = os.path.join(ROOT_DIR, "results/")
 
 class filamentConfig(Config):
     NAME = "filament"
-    IMAGES_PER_GPU = 2
+    IMAGES_PER_GPU = 1
     NUM_CLASSES = 1 + 4  # Background + filament
     STEPS_PER_EPOCH = 100
     DETECTION_MIN_CONFIDENCE = 0.9
@@ -301,7 +301,9 @@ def batch_detect(model, dir_path=None):
     for x in files:
     	detect_filament(model, x)
 
-    
+def model_summary(model):
+    model.summary()	
+   
 def detect_filament(model, image_path=None):
     assert image_path
 
@@ -309,10 +311,10 @@ def detect_filament(model, image_path=None):
         total_duration_start = datetime.datetime.now()
         file_ext = str(image_path).split('/')
         filename = file_ext[-1].split('.')    
-        if not os.path.exists("results/"):
-        	os.mkdir("results/")        
+        if not os.path.exists(results_dir):
+        	os.mkdir(results_dir)        
 
-        log_filename = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}.txt".format(datetime.datetime.now())
+        log_filename = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}.txt".format(datetime.datetime.now())
         log_file = open(log_filename, "a")
         log_image_name = file_ext[-1]
         print(log_image_name, file=log_file)
@@ -335,7 +337,7 @@ def detect_filament(model, image_path=None):
         print(class_id, file=log_file)       	        	
         print("Bounding Boxes:", file=log_file)
         print(rect, file=log_file)       	
-        file_name_binary = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_binary.png".format(start_time)
+        file_name_binary = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}_binary.png".format(start_time)
         start_time = datetime.datetime.now()
         binary = segment_filament(r, image)
         end_time = datetime.datetime.now()
@@ -346,7 +348,7 @@ def detect_filament(model, image_path=None):
         cv2.imwrite(file_name_binary,binary[0])    
    	      	
 	#save slices
-        folder_name = "results/"+filename[0]+"/"
+        folder_name = results_dir+filename[0]+"/"
         if not os.path.exists(folder_name):
         	os.mkdir(folder_name)
         cv2.imwrite(folder_name+"_0_full.png",binary[1]) 
@@ -357,7 +359,7 @@ def detect_filament(model, image_path=None):
         		cv2.imwrite(folder_name+"slice_"+ str(e) + "_ori.png",binary[4][e])	
 
 	#save border
-        file_name = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_border.png".format(start_time)
+        file_name = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}_border.png".format(start_time)
         img_border = image.copy()
         for b in range(mask.shape[2]):
             if r['class_ids'][b] == 1:
@@ -367,20 +369,20 @@ def detect_filament(model, image_path=None):
         cv2.imwrite(file_name, img_border)        
 
 	#save mask                              
-        #file_name_mask = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_mask.png".format(start_time)
+        #file_name_mask = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}_mask.png".format(start_time)
         #visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], r['scores'], 
 	#		title="Mask Prediction",show_mask=True, show_bbox=False, captions=False, 
 	#		show_border=False, show_label=False, save_image=file_name_mask)
 
 	#save bounding box                              
-        file_name_box = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_bbox.png".format(start_time)
+        file_name_box = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}_bbox.png".format(start_time)
         for i in range(0,len(rect)):
         	cv2.rectangle(image,((rect[i][1]),(rect[i][0])),((rect[i][3]),
 				(rect[i][2])),(255,255,255),2)
         	cv2.imwrite(file_name_box, image)
 
 	#save spine
-        file_name_spine = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_spine.png".format(start_time)
+        file_name_spine = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}_spine.png".format(start_time)
         image_spine = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
         image_spine.fill(255)
         ss=0
@@ -393,7 +395,7 @@ def detect_filament(model, image_path=None):
         cv2.imwrite(file_name_spine, image_spine)
         
 	#save final visualization
-        file_name_final = "results/"+filename[0]+"_{:%Y%m%d_%H_%M_%S}_final.png".format(start_time)
+        file_name_final = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}_final.png".format(start_time)
         image_final = img_border.copy()
         for jj,box in enumerate(rect):
             if r['class_ids'][jj] != 1:
@@ -422,13 +424,18 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', required=False,
                         metavar="/path/to/filament/dataset/",
                         help='Directory of the filament dataset')
-    parser.add_argument('--weights', required=True,
+    parser.add_argument('--weights', required=False,
+                        default="coco",    
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
     parser.add_argument('--logs', required=False,
                         default=DEFAULT_LOGS_DIR,
                         metavar="/path/to/logs/",
                         help='Logs and checkpoints directory (default=logs/)')
+    parser.add_argument('--results', required=False,
+                        default=DEFAULT_RESULTS_DIR,
+                        metavar="/path/to/results/",
+                        help='Detection results directory (default=results/)')                      
     parser.add_argument('--image', required=False,
                         metavar="path or URL to image",
                         help='Image to apply the detection')
@@ -449,6 +456,8 @@ if __name__ == '__main__':
     print("Weights: ", args.weights)
     print("Dataset: ", args.dataset)
     print("Logs: ", args.logs)
+    print("Logs: ", args.results)
+    results_dir=args.results
 
     if args.command == "train":
         config = filamentConfig()
@@ -461,7 +470,7 @@ if __name__ == '__main__':
 
     if args.command == "train":
         model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=args.logs)
+                                  model_dir=args.logs)                               
     else:
         model = modellib.MaskRCNN(mode="inference", config=config,
                                   model_dir=args.logs)
@@ -490,6 +499,8 @@ if __name__ == '__main__':
     elif args.command == "detect":
         detect_filament(model, image_path=args.image)                                
     elif args.command == "batch":
-        batch_detect(model, dir_path=args.dir)           
+        batch_detect(model, dir_path=args.dir)
+    elif args.command == "summary": 
+        model_summary(model)
     else:
         print("'{}' is not recognized. ".format(args.command))
