@@ -143,7 +143,7 @@ def train(model):
 #    print("Train all layers at 0.0005")
     model.train(dataset_train, dataset_val,
                 learning_rate=0.001,
-                epochs=100,
+                epochs=150,
                 #augmentation=augmentation,
                 layers='all')
 
