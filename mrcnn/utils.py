@@ -545,7 +545,8 @@ def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square
         # Pick a random crop
         h, w = image.shape[:2]
         y = random.randint(0, (h - min_dim))
-        x = random.randint(0, (w - min_dim))
+        #x = random.randint(0, (w - min_dim))
+        x = random.randint(int((w - min_dim)/3), int((w - min_dim)/2))
         crop = (y, x, min_dim, min_dim)
         image = image[y:y + min_dim, x:x + min_dim]
         window = (0, 0, min_dim, min_dim)
