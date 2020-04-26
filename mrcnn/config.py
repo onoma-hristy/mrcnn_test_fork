@@ -130,14 +130,14 @@ class Config(object):
     IMAGE_MAX_DIM = 1024 #for test phase
     """
     IMAGE_RESIZE_MODE = "crop"
-    IMAGE_MIN_DIM = 768
-    IMAGE_MAX_DIM = 768
+    IMAGE_MIN_DIM = 1024
+    IMAGE_MAX_DIM = 1024
 
     # Minimum scaling ratio. Checked after MIN_IMAGE_DIM and can force further
     # up scaling. For example, if set to 2 then images are scaled up to double
     # the width and height, or more, even if MIN_IMAGE_DIM doesn't require it.
     # However, in 'square' mode, it can be overruled by IMAGE_MAX_DIM.
-    IMAGE_MIN_SCALE = 0
+    IMAGE_MIN_SCALE = 1.3
     # Number of color channels per image. RGB = 3, grayscale = 1, RGB-D = 4
     # Changing this requires other changes in the code. See the WIKI for more
     # details: https://github.com/matterport/Mask_RCNN/wiki
@@ -145,7 +145,7 @@ class Config(object):
 
     # Image mean (RGB)
 #    MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
-    MEAN_PIXEL = np.array([45.0, 45.0, 45.0])
+    MEAN_PIXEL = np.array([60.0, 60.0, 60.0])
 
     # Number of ROIs per image to feed to classifier/mask heads
     # The Mask RCNN paper uses 512 but often the RPN doesn't generate
