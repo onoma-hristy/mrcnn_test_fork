@@ -7,6 +7,7 @@ import datetime
 import numpy as np
 import skimage.draw
 import skimage.io
+import skimage.util
 from pylab import array, plot, show, axis, arange, figure, uint8 
 from imgaug import augmenters as iaa
 from mrcnn import visualize
@@ -16,6 +17,10 @@ from scipy import signal
 from mrcnn.config import Config
 from mrcnn import model as modellib, utils
 from skimage.morphology import skeletonize
+from skimage.filters import threshold_niblack
+from bresenham import bresenham
+import math
+
 ROOT_DIR = os.path.abspath(".")
 sys.path.append(ROOT_DIR)
 COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
@@ -151,48 +156,7 @@ def train(model):
 #                learning_rate=config.LEARNING_RATE,
 #                epochs=100,
 #                layers='all')
-"""
-def threshold(image):
-    def thresh(a, b, max_value, C):
-        return max_value if a > b - C else 0
 
-    def mask(a,b):
-        return a if b > 100 else 0
-
-    def unmask(a,b,c):
-        return b if c > 100 else a
-
-    v_unmask = np.vectorize(unmask)
-    v_mask = np.vectorize(mask)
-    v_thresh = np.vectorize(thresh)
-
-    def block_size(size):
-        block = np.ones((size, size), dtype='d')
-        block[int((size-1)/2), int((size-1)/2)] = 0
-        return block
-
-    def get_number_neighbours(mask,block):
-        '''returns number of unmasked neighbours of every element within block'''
-        mask = mask / 255.0
-        return signal.convolve2d(mask, block, mode='same', boundary='symm')
-
-    def masked_adaptive_threshold(image,mask,max_value,size,C):
-        '''thresholds only using the unmasked elements'''
-        block = block_size(size)
-        conv = signal.convolve2d(image, block, mode='same', boundary='symm')
-        mean_conv = conv / get_number_neighbours(mask,block)
-        return v_thresh(image, mean_conv, max_value,C)
-
-    mask = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 69, 4)
-    mask = cv2.bitwise_not(mask)
-    original_image = np.asarray(image)
-    mask = np.asarray(mask)
-    image = v_mask(original_image, mask)
-    image = masked_adaptive_threshold(image,mask,max_value=255,size=9,C=4)
-    image = v_unmask(original_image, image, mask)
-    image = image.astype(np.uint8)
-    return image
-"""
 def detect_disk(img):
     if(len(img.shape)>2):
 	    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -216,24 +180,8 @@ def detect_disk(img):
     	true_y = 0
     	return true_x, true_y, true_r
 
-def remove_pixel(image,padding,iters):
-	mask = np.zeros((image.shape[0]+4,image.shape[1]+4))
-	mask[2:-2,2:-2] = np.invert(image)
-	mask_0 = mask.copy()
-	for w in range(iters):  
-	    for y in range(padding,len(mask)-padding):
-	        for x in range(padding,len(mask[y])-padding):
-	            if (mask[y,x] > 0): #4-pixel connectivity
-	            	temp = mask_0[y-padding-1:y+padding+2,x-padding-1:x+padding+2]
-	            	sums = np.sum(temp)
-	            	if(sums <= (255*2)): #remove adjacent pixels
-	            		mask[y,x] = 0
-#	                mask[y,x] = 255
-	    mask_0=mask
-	return mask[1:-1,1:-1].astype(np.uint8)
-
 def four_conn(image,padding,iters):
-	image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	#image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 	mask = np.zeros((image.shape[0]+2,image.shape[1]+2))
 	mask[1:-1,1:-1] = np.invert(image)
 	mask_0 = mask.copy()	
@@ -255,14 +203,90 @@ def four_conn(image,padding,iters):
 	    mask_0=mask	  
 	return mask[1:-1,1:-1].astype(np.uint8)
 
-def threshold(image):
-	ret, img = cv2.threshold(image, 0.95*np.mean(image), 255,cv2.THRESH_TRUNC) 
-	ret2, img2 = cv2.threshold(img, np.mean(img), 255,cv2.THRESH_BINARY)
-	mask = four_conn(img2,1,1)
-	mask2 = remove_pixel(np.invert(mask),1,2)
-	skel = skeletonize(np.where(np.array(mask2, dtype=bool),True==1,0))
-	return np.invert(mask2[1:-1,1:-1]), np.invert(skel[1:-1,1:-1])	
-    	
+def unbroken(image):
+	contours, hierarchy = cv2.findContours(np.invert(image),
+			      cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+	small = []
+	big = []
+	img = image.copy()
+	for cnt in contours:
+		set_cnt = np.unique(cnt, axis=0)
+		if len(set_cnt) < 5:
+			small.append(cnt)
+		else:
+			big.append(cnt)
+	cv2.drawContours(img,small,-1,255,-1)
+	cv2.drawContours(img,big,-1,0,-1)
+	img2 = img.copy()
+	pairs = [[p1,p2] for p1 in range(len(big)) for p2 in range(p1+1,len(big))]
+	distances = []
+	for i,xx in enumerate(pairs):
+		c0 = big[xx[0]]
+		c1 = big[xx[1]]
+		d0 = 99999999
+		for j in range(0,len(c0)-1):
+			for k in range(0,len(c1)-1):
+				d = distance(c0[j][0],c1[k][0])
+				if d<d0:
+					d0=d
+					c00 = c0[j][0] #koordinat y,x c0[j]
+					c10 = c1[k][0]
+					#print(d0,[[c00[0],c00[1]],[c10[0],c10[1]]])
+		distances.append([d0,[[c00[0],c00[1]],[c10[0],c10[1]]]])
+
+	pixed = []
+	for l in range(0,len(distances)):
+		if distances[l][0] < 15:
+			y0 = distances[l][1][0][0]
+			y1 = distances[l][1][1][0]			
+			x0 = distances[l][1][0][1]
+			x1 = distances[l][1][1][1]
+			pixed.append(list(bresenham(y0,x0,y1,x1)))		
+			
+	for m, zz in enumerate(pixed):
+		for n,aa in enumerate(zz):
+			if img2[aa[1],aa[0]] != 0:
+				img2[aa[1],aa[0]] = 128
+	return img, img2
+
+
+def distance(a,b):
+	dx = (a[1]-b[1])**2
+	dy = (a[0]-b[0])**2
+	d = math.sqrt(dx+dy)
+	return d
+
+
+def threshold(image,mean):
+	slices_0 = np.where(image==255,mean,image)
+	img2_mask = slices_0 > threshold_niblack(slices_0, window_size=25, k=0.7)
+	img2 = (img2_mask*255).astype(np.uint8)
+	img2 = np.where(image==255,255,img2)
+	con = four_conn(np.invert(img2),1,1)
+	bigc, fixed = unbroken(con)
+	fixed_mask = np.zeros_like(fixed)
+	fixed_mask = np.where(np.invert(fixed)==0,0,1)
+	skel = skeletonize(fixed_mask, method='lee')
+	skel = np.invert((skel*255).astype(np.uint8))
+	"""
+	f, axarr = plt.subplots(2,6)
+	axarr[0,0].set_title('Original')
+	axarr[0,0].imshow(slices_0, cmap='gray')
+	axarr[0,1].set_title('Niblack')           	    
+	axarr[0,1].imshow(img2, cmap='gray')
+	axarr[0,2].set_title('Four Conn')
+	axarr[0,2].imshow(con, cmap='gray')
+	axarr[0,3].set_title('Remove Small Cnt')           	    
+	axarr[0,3].imshow(bigc, cmap='gray')
+	axarr[0,4].set_title('Unbreak Filament')           	    
+	axarr[0,4].imshow(fixed, cmap='gray')
+	axarr[0,5].set_title('Skeleton')           	    
+	axarr[0,5].imshow(skel, cmap='gray')
+	plt.show()
+	"""
+	return fixed, skel	
+
+   	
 def segment_filament(r, image):
     if r['masks'].shape[-1] > 0:
     	binary_slices = []
@@ -281,20 +305,21 @@ def segment_filament(r, image):
     		if r['class_ids'][i] == 1: # 1 is filaments
     			slices = np.copy(masked_area[x[0]:x[2],x[1]:x[3]])
     			slices_ori = np.copy(image[x[0]:x[2],x[1]:x[3]])
-    			filament_ori = threshold(slices_ori)
+    			filament_ori = threshold(slices,int(np.mean(slices_ori)))
     			filament = np.where(mask[x[0]:x[2],x[1]:x[3],0], filament_ori[0],255)
-    			spine = np.where(mask[x[0]:x[2],x[1]:x[3],0], filament_ori[1],1)
-    			spine = np.where(spine==1,255,0)
+    			#spine = np.where(mask[x[0]:x[2],x[1]:x[3],0], filament_ori[1],1)
+    			#spine = np.where(spine==1,255,0)
     			binary_fullsize[x[0]:x[2],x[1]:x[3]]=filament
     			binary_slices.append(filament)
     			masked_slices.append(slices)
     			original_slices.append(slices_ori)
-    			skeleton.append(spine)
+    			skeleton.append(filament_ori[1])
     		else:
     			binary_slices.append([r['class_ids'][i]])
     			masked_slices.append([r['class_ids'][i]])
     			original_slices.append([r['class_ids'][i]])
     	return binary_fullsize, masked_area, binary_slices, masked_slices, original_slices,skeleton
+
         
 def batch_detect(model, dir_path=None):
     files = glob.glob(dir_path+"*.png")
