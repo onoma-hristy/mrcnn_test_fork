@@ -20,6 +20,7 @@ from skimage.morphology import skeletonize
 from skimage.filters import threshold_niblack
 from bresenham import bresenham
 import math
+import sqlite3
 
 ROOT_DIR = os.path.abspath(".")
 sys.path.append(ROOT_DIR)
@@ -156,29 +157,67 @@ def train(model):
 #                learning_rate=config.LEARNING_RATE,
 #                epochs=100,
 #                layers='all')
-
+def create_db(conn):
+	try:
+	    conn.execute('''CREATE TABLE IF NOT EXISTS FILE
+	    			(FILE_NAME VARCHAR(100) NOT NULL, DIMENSION VARCHAR(20) NOT NULL, CAPTURE_DATE TIMESTAMP NOT NULL, SOLAR_DISK_X INT NOT NULL, SOLAR_DISK_Y INT NOT NULL, SOLAR_DISK_RADIUS INT NOT NULL, PRIMARY KEY (FILE_NAME))''')
+	    conn.execute('''CREATE TABLE IF NOT EXISTS SOLAR_FEATURES
+	    			(FILE_NAME VARCHAR(100) NOT NULL, BOUNDING_BOX VARCHAR(100) NOT NULL, CLASS VARCHAR(50) NOT NULL, PRIMARY KEY (FILE_NAME, BOUNDING_BOX), FOREIGN KEY (FILE_NAME) REFERENCES FILE(FILE_NAME))''')
+	    conn.execute('''CREATE TABLE IF NOT EXISTS FILAMENTS
+	    			(FILE_NAME VARCHAR(100) NOT NULL, BOUNDING_BOX VARCHAR(100) NOT NULL, AREA TEXT NOT NULL, SPINE TEXT NOT NULL, PRIMARY KEY (FILE_NAME, BOUNDING_BOX), FOREIGN KEY (FILE_NAME) REFERENCES FILE(FILE_NAME), FOREIGN KEY (BOUNDING_BOX) REFERENCES SOLAR_FEATURES(BOUNDING_BOX))''')
+	    print("Table created successfully")
+	except:
+	    pass
+	conn.commit()	
+	
 def detect_disk(img):
-    if(len(img.shape)>2):
-	    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    circles = cv2.HoughCircles(img, cv2.HOUGH_GRADIENT, 1.8, 500)
-    if circles is not None:
-    	circles = np.round(circles[0, :]).astype("int")
-    	true_r = 0
-    	true_x = 0
-    	true_y = 0
-    	maxcircle = np.where(circles[:,2]==np.amax(circles[:,2]))
-    	x,y,r=circles[maxcircle[0]][0]
-    	if  r<400 and r>250 and (x>300 and x<700) and (y>300 and y<420):
-    		true_r = r
-    		true_x = x
-    		true_y = y
-    	return true_x, true_y, true_r	
-    else:
-    	print("No disk detected in the image ")
-    	true_r = 0
-    	true_x = 0
-    	true_y = 0
-    	return true_x, true_y, true_r
+	image = skimage.color.rgb2gray(img)
+	image = (image*255).astype(np.uint8)
+	init_y = int(image.shape[0]/2)
+	init_x = int(image.shape[1]/2)
+	window_size = 13
+	half = int((window_size-1)/2)
+
+	row = image[init_y]
+	row = np.pad(row,(half,half), constant_values=(row[0],row[-1]))
+	#row =  smooth(row,11,window='hanning')
+	peaks_y = []
+	row_range = np.max(row)-np.min(row)
+	t_row = int(row_range/10)
+
+	for i in range(half+1,image.shape[1]):
+		amax = np.max(row[i-half:i+half+1])
+		amin = np.min(row[i-half:i+half+1])
+		if(amax-amin>t_row):
+			peaks_y.append([(i-half)+np.argmax(row[i-half:i+half+1]),(i-half)+np.argmin(row[i-half:i+half+1])])
+	x_disk = ((peaks_y[-1][0]-peaks_y[0][1])/2)+peaks_y[0][1]			
+	col = image[:,init_x]
+	col = np.pad(col,(half,half), constant_values=(col[0],col[-1]))
+	#col =  smooth(col,11,window='hanning')
+	peaks_x = []
+	col_range = np.max(col)-np.min(col)
+	t_col = int(col_range/10)
+
+	for i in range(half+1,image.shape[0]):
+		amax = np.max(col[i-half:i+half+1])
+		amin = np.min(col[i-half:i+half+1])
+		if(amax-amin>t_col):
+			peaks_x.append([(i-half)+np.argmax(col[i-half:i+half+1]),(i-half)+np.argmin(col[i-half:i+half+1])])
+	y_disk = ((peaks_x[-1][0]-peaks_x[0][1])/2)+peaks_x[0][1]	
+
+	mid_row = image[int(y_disk)]
+	mid_row = np.pad(mid_row,(half,half), constant_values=(mid_row[0],mid_row[-1]))
+	#mid_row =  smooth(mid_row,11,window='hanning')
+	peaks_mid = []
+	mid_range = np.max(mid_row)-np.min(mid_row)
+	t_mid = int(mid_range/10)
+	for i in range(half+1,image.shape[1]):
+		amax = np.max(mid_row[i-half:i+half+1])
+		amin = np.min(mid_row[i-half:i+half+1])
+		if(amax-amin>t_mid):
+			peaks_mid.append([(i-half)+np.argmax(mid_row[i-half:i+half+1]),(i-half)+np.argmin(mid_row[i-half:i+half+1])])
+	rad = (peaks_mid[-1][0]-peaks_mid[0][0])/2
+	return int(x_disk), int(y_disk), int(rad)
 
 def four_conn(image,padding,iters):
 	#image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -315,30 +354,32 @@ def segment_filament(r, image):
     			original_slices.append(slices_ori)
     			skeleton.append(filament_ori[1])
     		else:
-    			binary_slices.append([r['class_ids'][i]])
-    			masked_slices.append([r['class_ids'][i]])
-    			original_slices.append([r['class_ids'][i]])
+    			binary_slices.append(np.copy(masked_area[x[0]:x[2],x[1]:x[3]]))
+    			masked_slices.append(np.copy(masked_area[x[0]:x[2],x[1]:x[3]]))
+    			original_slices.append(np.copy(masked_area[x[0]:x[2],x[1]:x[3]]))
+    			skeleton.append(np.copy(masked_area[x[0]:x[2],x[1]:x[3]]))
     	return binary_fullsize, masked_area, binary_slices, masked_slices, original_slices,skeleton
 
         
-def batch_detect(model, dir_path=None):
+def batch_detect(model, dir_path=None, mode=None):
     files = glob.glob(dir_path+"*.png")
     for x in files:
-    	detect_filament(model, x)
+    	detect_filament(model, x, mode)
 
 def model_summary(model):
     model.summary()	
    
-def detect_filament(model, image_path=None):
-    assert image_path
+def detect_filament(model, image_path=None, mode=None):
+    assert image_path #filename example: 2017-10-28_10-32-12.png
 
     if image_path:
+        conn = sqlite3.connect('filament.db')
+        create_db(conn)
         total_duration_start = datetime.datetime.now()
         file_ext = str(image_path).split('/')
-        filename = file_ext[-1].split('.')    
+        filename = file_ext[-1].split('.')            
         if not os.path.exists(results_dir):
         	os.mkdir(results_dir)        
-
         log_filename = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}.txt".format(datetime.datetime.now())
         log_file = open(log_filename, "a")
         log_image_name = file_ext[-1]
@@ -347,6 +388,8 @@ def detect_filament(model, image_path=None):
 
         image = skimage.io.imread(image_path)
         c = detect_disk(image)
+        disk_topleft_x = c[0]-c[2]
+        disk_topleft_y = c[1]-c[2]
 	
         r = model.detect([image], verbose=1)[0]
         end_time = datetime.datetime.now()
@@ -370,19 +413,42 @@ def detect_filament(model, image_path=None):
         print("Segmentation Duration:", file=log_file) 
         print(str(duration), file=log_file) 
 
-        cv2.imwrite(file_name_binary,binary[0])    
+        if mode=="full":
+	        cv2.imwrite(file_name_binary,binary[0])    
    	      	
 	#save slices
-        folder_name = results_dir+filename[0]+"/"
-        if not os.path.exists(folder_name):
-        	os.mkdir(folder_name)
-        cv2.imwrite(folder_name+"_0_full.png",binary[1]) 
-        for e, sliced in enumerate(binary[2]):
-        	if r['class_ids'][e] == 1:
-        		cv2.imwrite(folder_name+"slice_"+ str(e) + ".png",sliced)
-        		cv2.imwrite(folder_name+"slice_"+ str(e) + "_0.png",binary[3][e])
-        		cv2.imwrite(folder_name+"slice_"+ str(e) + "_ori.png",binary[4][e])	
+        #folder_name = results_dir+filename[0]+"/"
+        #if not os.path.exists(folder_name):
+        #	os.mkdir(folder_name)
+        #cv2.imwrite(folder_name+"_0_full.png",binary[1])
+        timestamp = datetime.datetime.strptime(filename[0], '%Y-%m-%d_%H-%M-%S')
+        conn.execute("INSERT INTO FILE \
+      		VALUES (?,?,?,?,?,?)",
+      		[str(filename[0])+"."+str(filename[1]), str(image.shape), timestamp, c[0],c[1],c[2]]) 
 
+        for e, sliced in enumerate(binary[2]):
+        	object_bbox = json.dumps(r['rois'][e].tolist())
+        	conn.execute("INSERT INTO SOLAR_FEATURES \
+      			VALUES (?,?,?)", [str(filename[0])+"."+str(filename[1]), 
+      			object_bbox, int(r['class_ids'][e])])        	
+        	if r['class_ids'][e] == 1:
+        		width = sliced.shape[1]
+        		height = sliced.shape[0]
+        		flat=sliced.flatten()
+        		index = np.where(flat == 0)
+        		idxlist = json.dumps(index[0].tolist())
+        		#filament_x = rect[e][1]  #-disk_topleft_x
+        		#filament_y = rect[e][0]  #-disk_topleft_y
+        		spine = binary[5][e].flatten()
+        		spineindex = np.where(spine == 0)
+        		spinelist = json.dumps(spineindex[0].tolist())
+        		conn.execute("INSERT INTO FILAMENTS \
+        			VALUES (?,?,?,?)", [str(filename[0])+"."+str(filename[1]), 
+        			object_bbox, idxlist, spinelist])  
+        		#cv2.imwrite(folder_name+"slice_"+ str(e) + ".png",sliced)
+        		#cv2.imwrite(folder_name+"slice_"+ str(e) + "_0.png",binary[3][e])
+        		#cv2.imwrite(folder_name+"slice_"+ str(e) + "_ori.png",binary[4][e])	
+        	conn.commit()
 	#save border
         file_name = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}_border.png".format(start_time)
         img_border = image.copy()
@@ -410,12 +476,12 @@ def detect_filament(model, image_path=None):
         file_name_spine = results_dir+filename[0]+"_{:%Y%m%d_%H_%M_%S}_spine.png".format(start_time)
         image_spine = np.zeros((image.shape[0], image.shape[1]), dtype=np.uint8)
         image_spine.fill(255)
-        ss=0
+        #ss=0
         for s in range(len(rect)):
         	if r['class_ids'][s] == 1:
-        		spine = binary[5][ss]
+        		spine = binary[5][s]
         		image_spine[rect[s][0]:rect[s][2],rect[s][1]:rect[s][3]] = spine
-        		ss+=1
+        		#ss+=1
         cv2.circle(image_spine, (c[0], c[1]), c[2], (0,0,0), 1)
         cv2.imwrite(file_name_spine, image_spine)
         
@@ -469,7 +535,10 @@ if __name__ == '__main__':
                         help='Image to apply the detection')
     parser.add_argument('--dir', required=False,
                         metavar="path to batch image detection",
-                        help='Image to apply the detection')                        
+                        help='Image to apply the detection')
+    parser.add_argument('--mode', required=False,
+                        default=None,
+                        help='Simple will only save to db, full generate visualizaton images')                                                      
     args = parser.parse_args()
 
     if args.command == "train":
@@ -524,7 +593,7 @@ if __name__ == '__main__':
     elif args.command == "detect":
         detect_filament(model, image_path=args.image)                                
     elif args.command == "batch":
-        batch_detect(model, dir_path=args.dir)
+        batch_detect(model, dir_path=args.dir, mode=args.mode)
     elif args.command == "summary": 
         model_summary(model)
     else:
