@@ -177,8 +177,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
  #       print(os.path.dirname(os.path.realpath(__file__)))
 #        file_name = "results/detect_{:%Y%m%dT%H%M%S}_bbox.png".format(datetime.datetime.now())
         plt.savefig(save_image)
-#    if auto_show:
-#        plt.show()
+    if auto_show:
+        plt.show()
 
 
 def display_differences(image,

@@ -24,8 +24,11 @@ def random_colors(N, bright=True):
         random.shuffle(colors)
         return colors
 
-def apply_mask(image, mask, alpha=0.5):
-        color = random_colors(mask.shape[2])
+def apply_mask(image, mask, alpha=0.5, color=None):
+        if color==None:
+	        color = random_colors(mask.shape[2])
+        else:
+        	color = [color] * mask.shape[2]	 
         for x in range(mask.shape[2]):
             if len(image.shape) > 2: #for RGB images
                 for c in range(3):
