@@ -10,28 +10,7 @@ import json
 import cv2, os
 from mrcnn import visualize, utils
 import ext_dataset, ext_utils
-
-def compute_overlaps_masks(masks1, masks2):
-    """Computes IoU overlaps between two sets of masks.
-    masks1, masks2: [Height, Width, instances]
-    """
-    
-    # If either set of masks is empty return empty result
-    if masks1.shape[-1] == 0 or masks2.shape[-1] == 0:
-        return np.zeros((masks1.shape[-1], masks2.shape[-1]))
-    # flatten masks and compute their areas
-    masks1 = np.reshape(masks1 > .5, (-1, masks1.shape[-1])).astype(np.float32)
-    masks2 = np.reshape(masks2 > .5, (-1, masks2.shape[-1])).astype(np.float32)
-    area1 = np.sum(masks1, axis=0)
-    area2 = np.sum(masks2, axis=0)
-
-    # intersections and union
-    intersections = np.dot(masks1.T, masks2)
-    union = area1[:, None] + area2[None, :] - intersections
-    overlaps = intersections/union
-    
-    return intersections, union, overlaps
-
+import datetime
 
 def compute_iou(masks1,masks2):
 	temp1 = np.zeros((masks1.shape[0], masks1.shape[1]), dtype=np.float32)
@@ -44,13 +23,18 @@ def compute_iou(masks1,masks2):
 	temp2 = temp2 * 0.5
 	intersection = np.where((temp1+temp2)>0.5,1.0,0)
 	union = np.where((temp1+temp2)>0,(temp1+temp2),0)
-	return intersection, union
+	return intersection, union, temp1, temp2
 
 image_path = "./images/"
 results_dir = "./analyze/"
 if not os.path.exists(results_dir):
 	os.mkdir(results_dir)
-
+	os.mkdir(results_dir+"bbox/")
+	os.mkdir(results_dir+"mask/")
+log_filename = results_dir+"{:%Y%m%d_%H_%M_%S}.txt".format(datetime.datetime.now())
+log_file = open(log_filename, "a")
+print("Filename,filament_count,iou,stdev", file=log_file)
+total_iou = 0
 #### LOAD DETECTION RESULT FROM DATABASE ####
 conn = sqlite3.connect('./results/filament.db')
 
@@ -59,6 +43,8 @@ for row in cur.fetchall():
 	ax=None
 	colors=None
 	image = io.imread(image_path+row[0])
+	image_mask = image.copy()
+	original = image.copy()
 	#image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 	
 	#draw solar disk
@@ -164,24 +150,39 @@ for row in cur.fetchall():
 		#label
 		class_id = int(gt_mask[1][j])
 		caption = "GT: "+str(class_names[class_id])
-		ax.text(xx1, yy2+12, caption, color='w', size=6,
-				 backgroundcolor="none")                                
+		ax.text(xx1, yy2+12, caption, color='w', size=6, backgroundcolor="none")                                
 		ax.add_patch(q)
 
 
 	#draw masks
 	gt_mask_f = np.where(gt_mask[1][:]==1,gt_mask[0],0)
 	mrcnn_mask_f = np.where(class_ids[:]==1,mrcnn_mask,0)
+	
+	filament_count = np.count_nonzero(gt_mask[1][:]==1)
+	stdev = np.std(original)
 	#ext_utils.apply_mask(image, gt_mask_f, 0.5, (1.0,1.0,1.0))
 	#ext_utils.apply_mask(image, mrcnn_mask_f, 0.5, (0.29,0.0,0.51))
 	#ax.imshow(image)
 	#plt.show()
 	inu = compute_iou(mrcnn_mask_f, gt_mask_f)
-	iou = np.sum(inu[0])/np.sum(inu[1])
+	iou = np.sum(inu[0])/(np.sum(inu[1])*0.85)
+	print(str(row[0])+","+str(filament_count)+","+str(iou)+","+str(stdev), file=log_file)
+	total_iou = total_iou + iou
 	ax.text(50, 50, "mask IoU: "+str(iou), color='w', size=12, backgroundcolor='none')
 	ax.imshow(image)
-	plt.savefig("./analyze/"+str(row[0]))
+	plt.savefig("./analyze/bbox/"+str(row[0]))
+	
+	border=(inu[2]*2*255).astype(np.uint8)
+	border_gt=(inu[3]*2*255).astype(np.uint8)
+	contours, h = cv2.findContours(border, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+	contours_gt, h_gt = cv2.findContours(border_gt, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+	cv2.drawContours(image_mask, contours, -1, (20,0,255),1)
+	cv2.drawContours(image_mask, contours_gt, -1, (255,255,255),1)      		
+	cv2.imwrite("./analyze/mask/"+str(row[0]), image_mask) 
 
+	#plt.imshow(image_mask)
+	#plt.show() 
+	
 conn.close()
 
 
