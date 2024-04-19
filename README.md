@@ -1,3 +1,2 @@
-# Mask R-CNN for Object Detection and Segmentation
-
-TEST RUN
+# Solar Filament Detection using Mask R-CNN
+# https://ieeexplore.ieee.org/document/8935810
